@@ -1,0 +1,22 @@
+{
+  "name": "vivero",
+  "version": "1.0.0",
+  "description": "This software was created with the purpose of providing a solution for the management of a plant nursery.",
+  "main": "index.js",
+  "scripts": {
+    "start" : "node src/index.js",
+       "dev": "node --watch src/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elexdero/vivero.git"
+  },
+  "keywords": [],
+  "author": "Jesús Alonso",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/elexdero/vivero/issues"
+  },
+  "homepage": "https://github.com/elexdero/vivero#readme"
+}
