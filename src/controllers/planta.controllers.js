@@ -50,10 +50,10 @@ export const eliminarPlanta = async(req, res) =>{
         if(rows ===0 || id <0){
             res.status(404).json({message : 'id no valido'});
         }
-        res.json({message : 'Planta eliminada con éxito'})
+        return res.json({message : 'Planta eliminada con éxito'})
     }catch(error){
         console.log('Error al eliminar la planta, ', error.message)
-        res.status(500).json({ message: "Error interno del servidor" });
+        res.status(505).json({ message: 'Error interno del servidor'});
     }
 }
 
