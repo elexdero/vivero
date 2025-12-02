@@ -9,11 +9,11 @@ export const mostrarTrabajadores = async(req, res) =>{
         }
         return res.json(rows)
     }catch(error){
-        return res.status(505).json({error :  error.message})
+        next(error);
     }
 }
 
-export const mostrarTrabajadoresById = async(req, res) =>{
+export const mostrarTrabajadoresById = async(req, res, next) =>{
     try{
         const {id} = req.params;
         const {rows} = await pool.query('SELECT *FROM Trabajadores WHERE tabajadorId = $1', [id]);
@@ -24,11 +24,11 @@ export const mostrarTrabajadoresById = async(req, res) =>{
         res.json(rows[0])
         
     }catch(error){
-        return res.status(505).json({error : error.message})
+        next(error)
     }
 }
 
-export const registrarTrabajador = async(req, res) =>{
+export const registrarTrabajador = async(req, res, next) =>{
     try{
         const {nameTrabajador, apPatTrabajador, apMatTrabajador, direccionTrabajador, telTrabajador, emailTrabajador} = req.body;
         if(!nameTrabajador || !apPatTrabajador || !apMatTrabajador || !direccionTrabajador || !telTrabajador || !emailTrabajador){
@@ -38,11 +38,11 @@ export const registrarTrabajador = async(req, res) =>{
         console.log(rows[0])
         res.json(rows)
     }catch(error){
-        return res.status(505).json({mesasage : error.mesasage});
+        next(error)
     }
 }
 
-export const borrarTrabajador = async (req, res) => {
+export const borrarTrabajador = async (req, res, next) => {
     try {
         const { id } = req.params;
         const {rows} = await pool.query('DELETE FROM trabajadores WHERE tabajadorId=$1', [id]);
@@ -52,7 +52,7 @@ export const borrarTrabajador = async (req, res) => {
         }
         return res.json({ message: 'Trabajador eliminado con éxito' });
     }catch(error){
-        return res.status(500).json({ message: error.message });
+        next(error)
     }
 };
 export const modificarTrabajador = async(req, res) =>{
@@ -67,6 +67,6 @@ export const modificarTrabajador = async(req, res) =>{
         console.log(result)
         return res.json(result.rows[0]);
     }catch(error){
-        return res.status.json({message : mesasage.error});
+        next(error)
     }
 }

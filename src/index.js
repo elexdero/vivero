@@ -7,10 +7,17 @@ import trabajadoresRoutes from './routes/trabajadores.routes.js';
 
 const app = express();
 
+app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(plantasRoutes, trabajadoresRoutes);
 
+
+app.use((err, req, res, next) =>{
+    return res.json({
+        message : err.message
+    });
+});
 
 app.listen(PORT);
 console.log(`El servidor esta corriendo en http://localhost:${PORT}`);

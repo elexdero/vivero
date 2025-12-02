@@ -3,7 +3,6 @@ import {inicio, mostrarPlantas, mostrarPlantasById, añadirPlanta, eliminarPlant
 
 const router = ROUTER();
 
-router.get('/', inicio)
 
 router.get('/plantas', mostrarPlantas);
 

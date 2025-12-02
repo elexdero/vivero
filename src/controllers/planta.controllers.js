@@ -1,4 +1,3 @@
-
 import { pool } from '../db.js'
 
 export const inicio = (req, res) =>{
@@ -24,7 +23,7 @@ export const mostrarPlantasById = async(req, res) =>{
         res.json({rows});
     }catch(error){
         console.log("Error al mostrar la planta")
-        res.status(500).json({message : error.message})
+        next(error)
     }
 }
 
@@ -39,7 +38,7 @@ export const añadirPlanta = async(req, res) =>{
         res.json(rows[0]);
     }catch(error){
         console.log('Error al añadir planta, ', error.message)
-        res.status(500).json({ message: "Error interno del servidor" });
+        next(error)
     }
 }
 
@@ -53,7 +52,7 @@ export const eliminarPlanta = async(req, res) =>{
         return res.json({message : 'Planta eliminada con éxito'})
     }catch(error){
         console.log('Error al eliminar la planta, ', error.message)
-        res.status(505).json({ message: 'Error interno del servidor'});
+        next(error)
     }
 }
 
@@ -70,6 +69,6 @@ export const modificarPlanta = async(req, res) =>{
         console.log(result);
         return res.json(result.rows[0]);
     }catch(error){
-        res.status(500).json({message : error.message})
+        next(error)
     }
 }
