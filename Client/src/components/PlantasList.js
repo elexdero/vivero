@@ -15,7 +15,7 @@ import {
     Tooltip,
     TextField,       
     InputAdornment,
-    MenuItem // <--- IMPORTANTE PARA EL SELECTOR
+    MenuItem 
 } from '@mui/material';
 import AddCircleIcon from '@mui/icons-material/AddCircle';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -23,7 +23,7 @@ import EditIcon from '@mui/icons-material/Edit';
 import GrassIcon from '@mui/icons-material/Grass';
 import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 import SearchIcon from '@mui/icons-material/Search';
-import FilterListIcon from '@mui/icons-material/FilterList'; // <--- Icono para el filtro
+import FilterListIcon from '@mui/icons-material/FilterList';
 
 export default function PlantasList() {
     const navigate = useNavigate();
@@ -32,9 +32,9 @@ export default function PlantasList() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     
-    // --- ESTADOS DE FILTRADO ---
+    //para filtrar
     const [searchTerm, setSearchTerm] = useState(""); 
-    const [filterType, setFilterType] = useState(""); // Estado para el tipo seleccionado
+    const [filterType, setFilterType] = useState("");
 
     const cargarPlantas = async () => {
         try {
@@ -72,11 +72,9 @@ export default function PlantasList() {
         }
     };
 
-    // --- OBTENER TIPOS ÚNICOS (Para llenar el menú automáticamente) ---
-    // Esto revisa todas tus plantas y extrae una lista de tipos sin repetir (ej: ["Floral", "Frutal", "Sombra"])
     const uniqueTypes = [...new Set(plantas.map(p => p.tipoplanta || p.type_planta || "General"))];
 
-    // --- LÓGICA DE FILTRADO DOBLE (Búsqueda + Tipo) ---
+
     const plantasFiltradas = plantas.filter((planta) => {
         // 1. Preparamos los datos
         const termino = searchTerm.toLowerCase();
@@ -84,14 +82,9 @@ export default function PlantasList() {
         const id = (planta.id_planta || "").toString();
         const tipoPlanta = planta.tipoplanta || planta.type_planta || "General";
 
-        // 2. Condición de Búsqueda (Texto)
         const matchesSearch = nombre.includes(termino) || id.includes(termino);
 
-        // 3. Condición de Tipo (Dropdown)
-        // Si filterType está vacío (significa "Todos"), pasa siempre (true). Si no, debe coincidir.
         const matchesType = filterType ? tipoPlanta === filterType : true;
-
-        // 4. Deben cumplirse AMBAS
         return matchesSearch && matchesType;
     });
 
@@ -115,8 +108,7 @@ export default function PlantasList() {
 
             {/* --- BARRA DE HERRAMIENTAS (BUSCADOR + FILTRO) --- */}
             <Grid container spacing={2} sx={{ mb: 4 }}>
-                {/* Buscador (Ocupa más espacio) */}
-                <Grid item xs={12} sm={8}>
+                <Grid item xs={10} sm={6}>
                     <TextField 
                         fullWidth
                         variant="outlined"
@@ -134,7 +126,6 @@ export default function PlantasList() {
                     />
                 </Grid>
 
-                {/* Filtro por Tipo (Ocupa menos espacio) */}
                 <Grid item xs={12} sm={4}>
                     <TextField
                         select

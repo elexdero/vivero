@@ -22,11 +22,9 @@ const handleSubmit = async (e) =>{
         try {
             const res = await fetch('http://localhost:4000/api/plantas/new', {
                 method: 'POST',
-                // --- AGREGAR ESTO ES OBLIGATORIO ---
                 headers: { 
                     'Content-Type': 'application/json' 
                 },
-                // -----------------------------------
                 body: JSON.stringify(plantas)
             });
 
@@ -36,7 +34,6 @@ const handleSubmit = async (e) =>{
                 console.log(data);
                 alert("Planta guardada correctamente");
             } else {
-                // Esto te mostrará el mensaje de error del backend en una alerta
                 alert(data.message); 
             }
         } catch (error) {
@@ -44,7 +41,7 @@ const handleSubmit = async (e) =>{
             alert("Error de conexión");
         }
     };
-    
+
     const handleChange = (e) =>{
         setPlantas({...plantas, [e.target.name] : e.target.value});
     };
@@ -56,18 +53,15 @@ const handleSubmit = async (e) =>{
             alignItems='center'
             justifyContent='center'
         >
-            <Grid item xs={12} md={8} lg={6}> {/* Aumenté el ancho (xs=3 era muy pequeño) */}
-                <Card sx={{ mt: 5, padding: 2 }}> {/* Padding interno para que no pegue a los bordes */}
+            <Grid item xs={12} md={8} lg={6}>
+                <Card sx={{ mt: 5, padding: 2 }}>
                     <CardContent>
                         <Typography variant="h5" gutterBottom textAlign="center">
                             Añadir Planta
                         </Typography>
                         
                         <form onSubmit={handleSubmit}>
-                            {/* spacing={2} da espacio automático entre todos los campos */}
                             <Grid container spacing={2}> 
-                                
-                                {/* FILA 1: Nombre y Científico */}
                                 <Grid item xs={12} sm={6}>
                                     <TextField
                                         name='namePlanta'
@@ -122,7 +116,7 @@ const handleSubmit = async (e) =>{
                                     />
                                 </Grid>
 
-                                {/* FILA 3: Luz y Riego */}
+                                {/* FILA 3:*/}
                                 <Grid item xs={12} sm={6}>
                                     <TextField
                                         name= 'typeLuz'
@@ -143,8 +137,7 @@ const handleSubmit = async (e) =>{
                                         onChange={handleChange}
                                     />
                                 </Grid>
-    
-                                 <Grid item xs={12} sm={6}>
+                                <Grid item xs={12} sm={6}>
                                     <TextField
                                         name='precioPlanta'
                                         label="Costo"
@@ -154,7 +147,6 @@ const handleSubmit = async (e) =>{
                                         onChange={handleChange}
                                     />
                                 </Grid>
-                                {/* Botón de Guardar */}
                                 <Grid item xs={12} sx={{marginLeft: 2}}>
                                     <Button variant="contained" color="primary" type='submit' fullWidth sx={{mt: 2}}>
                                         Guardar planta

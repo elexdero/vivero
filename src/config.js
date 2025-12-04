@@ -1,14 +1,10 @@
-import { config } from "dotenv";
+import { config } from 'dotenv';
+config();
 
-export const PORT = 3000;
+export const PORT = process.env.PORT || 4000;
 
-config()
-
-export const db = {
-     user: process.env.DB_USER,
-     password: process.env.DB_PASSWORD,
-     host: process.env.DB_HOST,
-     port: process.env.DB_PORT,
-     database: process.env.DB_NAME
-
-}
+export const DB_USER = process.env.DB_USER || 'postgres';
+export const DB_PASSWORD = process.env.DB_PASSWORD || 'Alonso2712';
+export const DB_HOST = process.env.DB_HOST || 'localhost';
+export const DB_VIVERO = process.env.DB_VIVERO || 'vivero';
+export const DB_PORT = process.env.DB_PORT || 5433;

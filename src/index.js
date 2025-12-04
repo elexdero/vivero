@@ -1,23 +1,29 @@
 import express from 'express';
 import morgan from 'morgan';
+import cors from 'cors';
 import { PORT } from './config.js';
-import plantasRoutes from './routes/plantas.routes.js';
-import trabajadoresRoutes from './routes/trabajadores.routes.js';
 
+// --- CAMBIO AQUÍ: Importa SOLO tu archivo main.routes.js ---
+import mainRoutes from './routes/main.routes.js'; 
 
 const app = express();
 
-app.use(cors());
+app.use(cors({
+    origin: 'http://localhost:3000',
+    credentials: true
+}));
+
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(plantasRoutes, trabajadoresRoutes);
 
+app.use('/api', mainRoutes);
 
-app.use((err, req, res, next) =>{
-    return res.json({
-        message : err.message
+// Manejo de errores
+app.use((err, req, res, next) => {
+    return res.status(500).json({
+        message: err.message
     });
 });
 
-app.listen(PORT);
-console.log(`El servidor esta corriendo en http://localhost:${PORT}`);
+app.listen(PORT || 4000);
+console.log(`Servidor corriendo en http://localhost:${PORT || 4000}`);

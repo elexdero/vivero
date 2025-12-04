@@ -1,18 +1,23 @@
 import { pool } from '../db.js'
 
+
 export const inicio = (req, res) =>{
     res.send('Inicio de la página por defecto')
 }
 
-export const mostrarPlantas = async (req, res) =>{
-    const {rows} = await pool.query(`SELECT *FROM plantas`)
-    if(rows ===0){
-        res.json({message : "No hay plantas registradas"})
+export const mostrarPlantas = async (req, res, next) =>{
+    try{
+        const {rows} = await pool.query(`SELECT *FROM plantas`)
+        if(rows.length === 0){
+            return res.json([])
+        }
+        res.json(rows)
+    }catch(error){
+        next(error);
     }
-    res.json(rows)
 }
 
-export const mostrarPlantasById = async(req, res) =>{
+export const mostrarPlantasById = async(req, res, next) =>{
     try{
         const {id} = req.params; 
         const {rows} = await pool.query(`SELECT * FROM plantas where idPlanta = $1`, [id]);
@@ -27,22 +32,28 @@ export const mostrarPlantasById = async(req, res) =>{
     }
 }
 
-export const añadirPlanta = async(req, res) =>{
-    try{
-        const {namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta} = req.body;//siempre se requieren estos datos
+export const añadirPlanta = async(req, res, next) => {
+    try {
+        const {namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta} = req.body;
+
         if(!namePlanta || !nameCient || !typePlanta || !tamPlanta || !typeLuz || !frecuenciaRiego || !precioPlanta){
-            return res.status(422).json({message : "Error al procesar los datos"});
+            return res.status(422).json({message : "Error: Faltan datos obligatorios"});
         }
-        const {rows} = await pool.query(`INSERT INTO plantas(namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta) VALUES($1, $2, $3, $4, $5, $6, $7) RETURNING *`, [namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta]);
+        const {rows} = await pool.query(`
+            INSERT INTO plantas (name_planta, name_cient,type_planta,tam_planta, type_luz, frecuencia_riego,precio_planta) VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`, 
+            [namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta]
+        );
+
         console.log('Se añadió una nueva planta.', rows[0]);
         res.json(rows[0]);
-    }catch(error){
-        console.log('Error al añadir planta, ', error.message)
-        next(error)
+        
+    } catch(error) {
+        console.log('Error al añadir planta:', error.message);
+        next(error);
     }
 }
 
-export const eliminarPlanta = async(req, res) =>{
+export const eliminarPlanta = async(req, res, next) =>{
     try{
         const {id} = req.params
         const {rows} = await pool.query(`DELETE FROM plantas WHERE idPlanta=$1`,[id])
@@ -56,7 +67,7 @@ export const eliminarPlanta = async(req, res) =>{
     }
 }
 
-export const modificarPlanta = async(req, res) =>{
+export const modificarPlanta = async(req, res, next) =>{
     try{
         const {id} = req.params;
         const {namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta} = req.body;
