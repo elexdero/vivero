@@ -1,15 +1,106 @@
 USE DATABASE viverocoyoacan;
 
-CREATE TABLE Trabajadores(
-    tabajadorId SERIAL PRIMARY KEY, 
-    nameTrabajador VARCHAR (20) NOT NULL,
-    apPatTrabajador VARCHAR (30) NOT NULL,
-    apMatTrabajador VARCHAR (20) NOT NULL,
-    direccionTrabajador VARCHAR (64) NOT NULL,
-    telTrabajador VARCHAR (10) NOT NULL,
-    emailTrabajador VARCHAR (64) NOT NULL
+--modificaciones--
+CREATE TABLE proveedores (
+    id_proveedor SERIAL PRIMARY KEY,
+    name_proveedor VARCHAR(30) NOT NULL,
+    rfc_proveedor VARCHAR(13)NOT NULL,
+    dir_proveedor VARCHAR(100) NOT NULL,
+    cont_proveedor VARCHAR(10) NOT NULL
 );
 
+INSER INTO Proveedores(NAME)
+
+CREATE TABLE clientes (
+    id_cliente SERIAL PRIMARY KEY,
+    name_cliente VARCHAR(25) NOT NULL,
+    ap_pat_cliente VARCHAR(20) NOT NULL,
+    ap_mat_cliente VARCHAR(15) NOT NULL,
+    dir_cliente VARCHAR(100) NOT NULL,
+    tel_cliente VARCHAR(15) NOT NULL,
+    mail_cliente VARCHAR(100) NOT NULL
+);
+
+CREATE TABLE eventos (
+    id_evento SERIAL PRIMARY KEY,
+    nombre_evento VARCHAR(32) NOT NULL,
+    des_evento VARCHAR(150) NOT NULL,
+    date_evento DATE NOT NULL,
+    cost_evento NUMERIC(10,2) DEFAULT 0,
+    cupo_maximo INT CHECK (cupo_maximo > 0)
+);
+INSERT INTO eventos (nombre_evento, des_evento, date_evento, cost_evento, cupo_maximo) 
+VALUES 
+('Taller de Jardinería Básica', 'Aprende a cuidar tus plantas de interior y exterior.', '2024-05-20', 150.00, 25);
+
+--tabla intermedia conexión de eventos-clientes
+CREATE TABLE inscripciones (
+    id_inscripcion SERIAL PRIMARY KEY,
+    id_evento INTEGER REFERENCES eventos(id_evento) ON DELETE CASCADE,
+    id_cliente INTEGER REFERENCES clientes(id_cliente) ON DELETE CASCADE,
+    fecha_registro DATE DEFAULT CURRENT_DATE
+);
+
+CREATE TABLE trabajadores(
+    id_trabajador SERIAL PRIMARY KEY, 
+    name_trabajador VARCHAR (20) NOT NULL,
+    ap_pat_trabajador VARCHAR (30) NOT NULL,
+    ap_mat_trabajador VARCHAR (20) NOT NULL,
+    direccion_trabajador VARCHAR (64) NOT NULL,
+    tel_trabajador VARCHAR (10) NOT NULL,
+    email_trabajador VARCHAR (64) NOT NULL
+);
+
+CREATE TABLE mantenimientos (
+    id_mantenimiento SERIAL PRIMARY KEY,
+    id_planta INTEGER REFERENCES plantas(id_planta) ON DELETE CASCADE,
+    id_personal INTEGER REFERENCES trabajadores(tabajadorId) ON DELETE SET NULL,
+    freq_riego VARCHAR(20) NOT NULL,
+    type_fertilizacion VARCHAR(20) NOT NULL,
+    obs_ejemplar VARCHAR(255)
+);
+
+CREATE TABLE productos (
+    id_producto SERIAL PRIMARY KEY,
+    name_producto VARCHAR(40) NOT NULL,
+    info_producto VARCHAR(144),
+    stock INTEGER NOT NULL,
+    precio_producto NUMERIC(10, 2) NOT NULL,
+    id_proveedor INTEGER REFERENCES proveedores(id_proveedor)
+);
+CREATE TABLE otros_servicios (
+    id_servicio SERIAL PRIMARY KEY,
+    name_servicio VARCHAR(50) NOT NULL,
+    fecha_servicio DATE NOT NULL,
+    desc_servicio VARCHAR(150),
+    costo_servicio NUMERIC(10, 2) NOT NULL,
+    id_producto INTEGER REFERENCES productos(id_producto) ON DELETE SET NULL
+);
+
+CREATE TABLE pedidos (
+    id_pedido SERIAL PRIMARY KEY,
+    id_cliente INTEGER REFERENCES clientes(id_cliente), -- RELACIÓN CON CLIENTE
+    fecha_pedido DATE DEFAULT CURRENT_DATE,
+    fecha_entrega DATE, -- Tu 'Timeout'
+    estado VARCHAR(20) DEFAULT 'Pendiente', -- 'Pendiente', 'Listo', 'Entregado'
+    total_estimado NUMERIC(10, 2) DEFAULT 0
+);
+--tabla de detalles
+CREATE TABLE detalle_pedidos (
+    id_detalle SERIAL PRIMARY KEY,
+    id_pedido INTEGER REFERENCES pedidos(id_pedido) ON DELETE CASCADE,
+    
+    -- El item que quiere el cliente
+    id_planta INTEGER REFERENCES plantas(id_planta),
+    id_producto INTEGER REFERENCES productos(id_producto),
+    
+    -- A qué proveedor se lo vamos a pedir nosotros
+    id_proveedor INTEGER REFERENCES proveedores(id_proveedor),
+    
+    cantidad INTEGER NOT NULL,
+    precio_cotizado NUMERIC(10, 2) NOT NULL, -- Precio al que se lo venderás al cliente
+    subtotal NUMERIC(10, 2) NOT NULL
+);
 /*carga de usuarios*/
 INSERT INTO Trabajadores(nameTrabajador, apPatTrabajador, apMatTrabajador, direccionTrabajador, telTrabajador, emailTrabajador)
     VALUES('Efren', 'Banini', 'Salazar', 'Av tepozanes #16 NezaYork', '5566471525', 'bananini@gmail.com');
@@ -22,12 +113,12 @@ SELECT *FROM Trabajadores;
 INSERT INTO plantas(namePlanta, nameCient, typePlanta, tamPlanta, typeLuz, frecuenciaRiego, precioPlanta)
     VALUES('Tulipan', 'Tulipa spp', 'Bulbosa', '40.2', 'indi', 'A diario', 100);
 
-CREATE TABLE Proveedores (
-    IdProveedor NUMERIC(5) NOT NULL,
-    nameProveedor VARCHAR(30) NOT NULL,
-    RFCProveedor VARCHAR(13) NOT NULL,
-    dirProveedor VARCHAR(100) NOT NULL,
-    contProveedor NUMERIC(10) NOT NULL,
+CREATE TABLE proveedores (
+    id_proveedor NUMERIC(5) NOT NULL,
+    name_proveedor VARCHAR(30) NOT NULL,
+    rfc_proveedor VARCHAR(13) NOT NULL,
+    dir_proveedor VARCHAR(100) NOT NULL,
+    cont_proveedor NUMERIC(10) NOT NULL
     CONSTRAINT pk_proveedores PRIMARY KEY (IdProveedor),
     CONSTRAINT chk_idprov_positivo CHECK (IdProveedor > 0),
     CONSTRAINT uq_cont_proveedor UNIQUE (contProveedor),
@@ -85,48 +176,33 @@ CREATE TABLE Trabajadores (
     CONSTRAINT chk_sueldo_pos CHECK (sueldoEmp > 0)
 );
 
-CREATE TABLE Productos (
-    IdProducto NUMERIC(5) NOT NULL,
-    nameProducto VARCHAR(40) NOT NULL,
-    infoProducto VARCHAR(144) NOT NULL,
-    stock NUMERIC(4) NOT NULL,
-    precioProducto NUMERIC(4) NOT NULL,
-    IdProveedor NUMERIC(5) NOT NULL,
-    CONSTRAINT pk_productos PRIMARY KEY (IdProducto),
-    CONSTRAINT fk_productos_proveedores FOREIGN KEY (IdProveedor) REFERENCES Proveedores(IdProveedor),
-    CONSTRAINT chk_id_producto_pos CHECK (IdProducto > 0),
-    CONSTRAINT chk_precio_producto_pos CHECK (precioProducto >= 0)
+
+
+
+CREATE TABLE ventas (
+    id_venta SERIAL PRIMARY KEY,
+    fecha_venta TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    forma_pago VARCHAR(20) NOT NULL, -- Efectivo, Tarjeta, Transferencia
+    total_venta NUMERIC(10, 2) NOT NULL,
+    estado VARCHAR(20) DEFAULT 'Pagado' -- Pagado, Pendiente
 );
 
-CREATE TABLE Ventas (
-    idVenta NUMERIC(5) NOT NULL,
-    idCliente NUMERIC(13) NOT NULL, -- CORREGIDO: Cambiado de 5 a 13 para coincidir con Clientes
-    idProducto NUMERIC(5) NOT NULL,
-    dateCompra DATE NOT NULL,
-    formaPago VARCHAR(13) NOT NULL,
-    totalPagado NUMERIC(6) NOT NULL,
-    saldoPendiente NUMERIC(6) NOT NULL,
-    CONSTRAINT pk_ventas PRIMARY KEY (idVenta),
-    CONSTRAINT fk_ventas_clientes FOREIGN KEY (idCliente) REFERENCES Clientes(IdCliente),
-    CONSTRAINT fk_ventas_productos FOREIGN KEY (idProducto) REFERENCES Productos(IdProducto),
-    CONSTRAINT chk_idventa_pos CHECK (idVenta > 0),
-    CONSTRAINT chk_total_pos CHECK (totalPagado >= 0),
-    CONSTRAINT chk_saldo_pos CHECK (saldoPendiente >= 0),
-    CONSTRAINT chk_forma_pago CHECK (formaPago IN ('efectivo', 'transferencia', 'tarjeta'))
+--tabla resultante
+CREATE TABLE detalle_ventas (
+    id_detalle SERIAL PRIMARY KEY,
+    id_venta INTEGER REFERENCES ventas(id_venta) ON DELETE CASCADE,
+    
+    -- Aquí está el truco: 3 columnas opcionales
+    id_planta INTEGER REFERENCES plantas(id_planta),
+    id_producto INTEGER REFERENCES productos(id_producto),
+    id_servicio INTEGER REFERENCES otros_servicios(id_servicio),
+    
+    cantidad INTEGER NOT NULL,
+    precio_unitario NUMERIC(10, 2) NOT NULL,
+    subtotal NUMERIC(10, 2) NOT NULL
 );
 
-CREATE TABLE OtrosServicios (
-    IdServicio NUMERIC(8) NOT NULL,
-    NomServicio VARCHAR(20) NOT NULL,
-    DateServ DATE NOT NULL,
-    DescServicio VARCHAR(150) NOT NULL,
-    CostServicio NUMERIC(5) NOT NULL,
-    IdProducto NUMERIC(5) NOT NULL,
-    CONSTRAINT pk_otros_servicios PRIMARY KEY (IdServicio),
-    CONSTRAINT fk_servicios_productos FOREIGN KEY (IdProducto) REFERENCES Productos(IdProducto),
-    CONSTRAINT chk_id_servicio_pos CHECK (IdServicio > 0),
-    CONSTRAINT chk_costo_servicio_pos CHECK (CostServicio >= 0)
-);
+
 
 CREATE TABLE Pedidos (
     idVenta NUMERIC(8) NOT NULL,

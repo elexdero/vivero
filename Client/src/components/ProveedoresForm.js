@@ -1,136 +1,122 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { 
-    Button, 
-    TextField, 
-    Grid, 
-    Card, 
-    CardContent, 
-    Typography, 
-    Container,
-    InputAdornment
-} from '@mui/material';
-import SaveIcon from '@mui/icons-material/Save';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import BusinessIcon from '@mui/icons-material/Business';
+import { Card, CardContent, Grid, TextField, Typography, Button, CircularProgress } from '@mui/material';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 
 export default function ProveedoresForm() {
-    const navigate = useNavigate();
-
-    // 1. Estado inicial con los nombres EXACTOS de tu tabla
+    
+    // Usamos los nombres exactos de la BD para facilitar el envío
     const [proveedor, setProveedor] = useState({
-        IdProveedor: '',
-        nameProveedor: '',
-        RFCProveedor: '',
-        dirProveedor: '',
-        contProveedor: ''
+        name_proveedor: '',
+        rfc_proveedor: '',
+        dir_proveedor: '',
+        cont_proveedor: ''
     });
+
+    const [loading, setLoading] = useState(false);
+    const [editing, setEditing] = useState(false);
+    
+    const navigate = useNavigate();
+    const params = useParams(); // Para leer el ID en modo edición
+
+    // Cargar datos si estamos editando
+    useEffect(() => {
+        if (params.id) {
+            const cargarDatos = async () => {
+                setLoading(true);
+                try {
+                    // Petición al backend
+                    const res = await fetch(`http://localhost:4000/api/proveedores/${params.id}`);
+                    const data = await res.json();
+                    
+                    // Rellenamos el estado con los datos recibidos
+                    setProveedor({
+                        name_proveedor: data.name_proveedor,
+                        rfc_proveedor: data.rfc_proveedor,
+                        dir_proveedor: data.dir_proveedor,
+                        cont_proveedor: data.cont_proveedor
+                    });
+                    setEditing(true);
+                } catch (error) {
+                    console.error(error);
+                    alert("Error al cargar proveedor");
+                }
+                setLoading(false);
+            };
+            cargarDatos();
+        }
+    }, [params.id]);
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const url = editing 
+                ? `http://localhost:4000/api/proveedores/edit/${params.id}`
+                : 'http://localhost:4000/api/proveedores/new';
+            const method = editing ? 'PUT' : 'POST';
+
+            const res = await fetch(url, {
+                method: method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(proveedor)
+            });
+
+            if (res.ok) {
+                alert(editing ? "Proveedor actualizado" : "Proveedor registrado");
+                navigate('/proveedores');
+            } else {
+                alert("Error al guardar (verifica los datos)");
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión");
+        }
+        setLoading(false);
+    };
 
     const handleChange = (e) => {
         setProveedor({ ...proveedor, [e.target.name]: e.target.value });
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        console.log("Datos del proveedor a guardar:", proveedor);
-        alert("Proveedor registrado con éxito");
-        navigate('/proveedores');
-    };
-
     return (
-        <Container maxWidth="md" sx={{ mb: 4 }}>
-            <Card sx={{ mt: 5, p: 2, borderLeft: '6px solid #00695c' }}>
-                <CardContent>
-                    <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: '#00695c' }}>
-                        Registro de Proveedor
-                    </Typography>
-                    
-                    <Typography variant="body2" sx={{ mb: 3, textAlign: 'center', color: 'text.secondary' }}>
-                        Ingresa los datos fiscales y de contacto de la empresa proveedora.
-                    </Typography>
-
-                    <form onSubmit={handleSubmit}>
-                        <Grid container spacing={3}>
-
-                            {/* RFC */}
-                            <Grid item xs={12} sm={8}>
-                                <TextField 
-                                    label="RFC" 
-                                    name="RFCProveedor" 
-                                    fullWidth 
-                                    required 
-                                    variant="outlined" 
-                                    placeholder="Ej: ABC123456HM1"
-                                    inputProps={{ style: { textTransform: 'uppercase' } }} // Sugerencia visual
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-
-                            {/* Nombre de la Empresa */}
-                            <Grid item xs={12}>
-                                <TextField 
-                                    label="Nombre o Razón Social" 
-                                    name="nameProveedor" 
-                                    fullWidth 
-                                    required 
-                                    variant="outlined" 
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <BusinessIcon color="action" />
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-
-                            {/* Teléfono */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField 
-                                    label="Teléfono de Contacto" 
-                                    name="contProveedor" 
-                                    type="tel"
-                                    fullWidth 
-                                    required 
-                                    variant="outlined" 
-                                    placeholder="Ej: 55 1234 5678"
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-
-                            {/* Dirección */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField 
-                                    label="Dirección Completa" 
-                                    name="dirProveedor" 
-                                    fullWidth 
-                                    required 
-                                    variant="outlined" 
-                                    placeholder="Calle, Número, Colonia, Ciudad"
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-
-                            {/* Botones */}
-                            <Grid item xs={12} sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 2 }}>
-                                <Button variant="outlined" color="secondary" startIcon={<ArrowBackIcon />} onClick={() => navigate('/proveedores')}>
-                                    Cancelar
-                                </Button>
-                                <Button 
-                                    type="submit" 
-                                    variant="contained" 
-                                    startIcon={<SaveIcon />}
-                                    sx={{ backgroundColor: '#00695c', '&:hover': { backgroundColor: '#004d40' } }}
-                                >
-                                    Guardar Proveedor
-                                </Button>
-                            </Grid>
-
-                        </Grid>
-                    </form>
-                </CardContent>
-            </Card>
-        </Container>
+        <Grid container direction="column" alignItems='center' justifyContent='center'>
+            <Grid item xs={12} md={8} lg={6}>
+                <Card sx={{ mt: 5, padding: 3 }}>
+                    <CardContent>
+                        <Typography variant="h5" gutterBottom textAlign="center" sx={{ mb: 3 }}>
+                            {editing ? "Editar Proveedor" : "Registrar Proveedor"}
+                        </Typography>
+                        
+                        {loading ? <CircularProgress sx={{ display:'block', mx:'auto' }} /> : (
+                            <form onSubmit={handleSubmit}>
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12}>
+                                        <TextField name='name_proveedor' label="Nombre / Razón Social" variant='outlined' fullWidth 
+                                            value={proveedor.name_proveedor} onChange={handleChange} required />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField name='rfc_proveedor' label="RFC" variant='outlined' fullWidth 
+                                            value={proveedor.rfc_proveedor} onChange={handleChange} required />
+                                    </Grid>
+                                    <Grid item xs={12} sm={6}>
+                                        <TextField name='cont_proveedor' label="Teléfono / Contacto" variant='outlined' fullWidth 
+                                            value={proveedor.cont_proveedor} onChange={handleChange} required />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <TextField name='dir_proveedor' label="Dirección Completa" variant='outlined' fullWidth multiline rows={2}
+                                            value={proveedor.dir_proveedor} onChange={handleChange} required />
+                                    </Grid>
+                                    <Grid item xs={12}>
+                                        <Button variant="contained" type='submit' fullWidth size="large" sx={{ mt: 2, bgcolor: '#1565c0' }}>
+                                            {editing ? "Guardar Cambios" : "Registrar"}
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </form>
+                        )}
+                    </CardContent>
+                </Card>
+            </Grid>
+        </Grid>
     );
 }

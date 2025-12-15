@@ -24,10 +24,11 @@ export default function Navbar(){
                         <Button variant="contained" color="primary" onClick={() =>navigate('/mantenimientos')} sx={{marginLeft: 2, backgroundColor: '#303413','&:hover': { backgroundColor: '#23260e'}}}>
                             Mantenimientos
                         </Button>
-                        <Button variant="contained" color="primary" onClick={() =>navigate('/trabajadores')} sx={{marginLeft: 2, backgroundColor: '#303413','&:hover': { backgroundColor: '#23260e'}}}>
+                        {/*                        <Button variant="contained" color="primary" onClick={() =>navigate('/trabajadores')} sx={{marginLeft: 2, backgroundColor: '#303413','&:hover': { backgroundColor: '#23260e'}}}>
                             Trabajadores
-                        </Button>
-                        <Button variant="contained" color="primary" onClick={() =>navigate('/otrosServicios')} sx={{marginLeft: 2, backgroundColor: '#303413','&:hover': { backgroundColor: '#23260e'}}}>
+                        </Button>*/}
+
+                        <Button variant="contained" color="primary" onClick={() =>navigate('/servicios')} sx={{marginLeft: 2, backgroundColor: '#303413','&:hover': { backgroundColor: '#23260e'}}}>
                             Servicios
                         </Button>
                         <Button variant="contained" onClick={() => navigate('/proveedores')} sx={{marginLeft: 2, backgroundColor: '#303413','&:hover': { backgroundColor: '#23260e'}}}>

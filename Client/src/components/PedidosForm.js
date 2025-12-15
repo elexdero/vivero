@@ -1,189 +1,276 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-    Button, 
-    TextField, 
-    Grid, 
-    Card, 
-    CardContent, 
-    Typography, 
-    Container, 
-    MenuItem,
-    Box
+    Button, TextField, Grid, Card, CardContent, Typography, Container, MenuItem, Box,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, IconButton, 
+    CircularProgress, Alert
 } from '@mui/material';
+import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
+import DeleteIcon from '@mui/icons-material/Delete';
 import SaveIcon from '@mui/icons-material/Save';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 
 export default function PedidosForm() {
     const navigate = useNavigate();
-    const { id } = useParams(); 
 
-    // Estado con los nombres EXACTOS de tu Tabla Pedidos
-    const [pedido, setPedido] = useState({
-        idVenta: '',
-        IdCliente: '',
-        IdProducto: '',
-        Unidades: '',
-        IdProveedor: '',
-        Timeout: ''      // Tiempo de entrega (Fecha)
-    });
+    // 1. ESTADOS DE CATÁLOGOS
+    const [clientes, setClientes] = useState([]); // <--- NECESITAMOS CLIENTES
+    const [proveedores, setProveedores] = useState([]);
+    const [plantas, setPlantas] = useState([]);
+    const [productos, setProductos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // --- LISTAS SIMULADAS (Para los Selects) ---
-    const clientesList = [
-        { id: 101, nombre: "Juan Pérez" },
-        { id: 102, nombre: "María González" }
-    ];
-    const productosList = [
-        { id: 501, nombre: "Maceta Barro #5" },
-        { id: 502, nombre: "Fertilizante X" }
-    ];
-    const proveedoresList = [
-        { id: 1, nombre: "Fertilizantes del Norte" },
-        { id: 2, nombre: "Macetas López" }
-    ];
+    // 2. ESTADOS DEL FORMULARIO
+    const [idCliente, setIdCliente] = useState(''); // <--- EL CLIENTE PIDE
+    const [fechaEntrega, setFechaEntrega] = useState('');
+    
+    // 3. ESTADOS PARA ITEM
+    const [tipoItem, setTipoItem] = useState('planta');
+    const [idItemSel, setIdItemSel] = useState('');
+    const [idProvSel, setIdProvSel] = useState(''); // Proveedor sugerido para este item
+    const [cantidad, setCantidad] = useState(1);
+    const [precio, setPrecio] = useState(0); 
 
-    // Cargar datos si es edición
+    const [carrito, setCarrito] = useState([]);
+
     useEffect(() => {
-        if (id) {
-            setPedido({
-                idVenta: id,
-                IdCliente: 101,
-                IdProducto: 502,
-                Unidades: 10,
-                IdProveedor: 1,
-                Timeout: "2024-03-20"
-            });
+        const cargarDatos = async () => {
+            try {
+                const [resCli, resProv, resPlantas, resProd] = await Promise.all([
+                    fetch('http://localhost:4000/api/clientes'), // Traemos clientes
+                    fetch('http://localhost:4000/api/proveedores'),
+                    fetch('http://localhost:4000/api/plantas'),
+                    fetch('http://localhost:4000/api/productos')
+                ]);
+
+                setClientes(await resCli.json());
+                setProveedores(await resProv.json());
+                setPlantas(await resPlantas.json());
+                setProductos(await resProd.json());
+                setLoading(false);
+            } catch (err) {
+                console.error(err);
+                setError("Error al cargar catálogos");
+                setLoading(false);
+            }
+        };
+        cargarDatos();
+    }, []);
+
+    const getListaActual = () => {
+        if (tipoItem === 'planta') return plantas;
+        if (tipoItem === 'producto') return productos;
+        return [];
+    };
+
+    const handleAgregarItem = () => {
+        if (!idItemSel || !idProvSel || cantidad <= 0 || precio <= 0) {
+            alert("Completa los datos del item (Producto, Proveedor, Cantidad y Precio)");
+            return;
         }
-    }, [id]);
 
-    const handleChange = (e) => {
-        setPedido({ ...pedido, [e.target.name]: e.target.value });
+        const lista = getListaActual();
+        const itemObj = lista.find(i => (i.id_planta === idItemSel) || (i.id_producto === idItemSel));
+        const provObj = proveedores.find(p => p.id_proveedor === idProvSel);
+        
+        const nombreItem = itemObj.name_planta || itemObj.name_producto || "Item";
+        const nombreProv = provObj ? provObj.name_proveedor : "Desconocido";
+
+        const nuevoItem = {
+            uniqueId: Date.now(),
+            type: tipoItem,
+            id: idItemSel,
+            id_proveedor: idProvSel,
+            nombre: nombreItem,
+            nombre_proveedor: nombreProv,
+            cantidad: parseInt(cantidad),
+            precio: parseFloat(precio),
+            subtotal: parseInt(cantidad) * parseFloat(precio)
+        };
+
+        setCarrito([...carrito, nuevoItem]);
+        setIdItemSel('');
+        setCantidad(1);
+        setPrecio(0);
     };
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        console.log("Pedido especial guardado:", pedido);
-        alert("Pedido registrado. Se notificará cuando llegue el stock.");
-        navigate('/pedidos');
+    const handleEliminarItem = (uniqueId) => {
+        setCarrito(carrito.filter(i => i.uniqueId !== uniqueId));
     };
+
+    const calcularTotal = () => carrito.reduce((acc, i) => acc + i.subtotal, 0);
+
+    const handleSubmit = async () => {
+        if (!idCliente || !fechaEntrega || carrito.length === 0) {
+            alert("Faltan datos: Cliente, Fecha o Items");
+            return;
+        }
+
+        const payload = {
+            id_cliente: idCliente, // Enviamos el cliente
+            fecha_entrega: fechaEntrega,
+            items: carrito
+        };
+
+        try {
+            const res = await fetch('http://localhost:4000/api/pedidos', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (res.ok) {
+                alert("Encargo registrado correctamente");
+                navigate('/pedidos');
+            } else {
+                const data = await res.json();
+                alert("Error: " + data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión");
+        }
+    };
+
+    if(loading) return <Container sx={{mt:5, textAlign:'center'}}><CircularProgress /></Container>;
 
     return (
-        <Container maxWidth="md" sx={{ mb: 4 }}>
-            <Card sx={{ mt: 5, p: 3, borderTop: '6px solid #7b1fa2' }}>
-                <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 3 }}>
-                        <AddShoppingCartIcon sx={{ color: '#7b1fa2', fontSize: 40, mr: 1 }} />
-                        <Typography variant="h5" sx={{ fontWeight: 'bold', color: '#4a0072' }}>
-                            {id ? "Modificar Pedido" : "Registrar Pedido Especial"}
-                        </Typography>
-                    </Box>
+        <Container maxWidth="lg" sx={{ mb: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mt: 4, mb: 2 }}>
+                <IconButton onClick={() => navigate('/pedidos')} sx={{ mr: 2 }}><ArrowBackIcon /></IconButton>
+                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#7b1fa2' }}>Nuevo Encargo (Cliente)</Typography>
+            </Box>
 
-                    <form onSubmit={handleSubmit}>
-                        <Grid container spacing={3}>
+            {error && <Alert severity="error" sx={{mb:2}}>{error}</Alert>}
 
-                            {/* Selector CLIENTE */}
-                            <Grid item xs={12} sm={8}>
-                                <TextField
-                                    select
-                                    label="Cliente Solicitante"
-                                    name="IdCliente"
-                                    fullWidth
-                                    required
-                                    variant="outlined"
-                                    value={pedido.IdCliente}
-                                    onChange={handleChange}
-                                >
-                                    {clientesList.map((c) => (
-                                        <MenuItem key={c.id} value={c.id}>{c.nombre}</MenuItem>
-                                    ))}
-                                </TextField>
+            <Grid container spacing={3}>
+                <Grid item xs={12} md={5}>
+                    <Card sx={{ p: 2, mb: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>1. Datos del Cliente</Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        select label="Cliente Solicitante" fullWidth
+                                        value={idCliente}
+                                        onChange={(e) => setIdCliente(e.target.value)}
+                                    >
+                                        {clientes.map(c => (
+                                            <MenuItem key={c.id_cliente} value={c.id_cliente}>
+                                                {c.name_cliente} {c.ap_pat_cliente}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField
+                                        type="date" label="Fecha Límite / Entrega" fullWidth
+                                        InputLabelProps={{ shrink: true }}
+                                        value={fechaEntrega}
+                                        onChange={(e) => setFechaEntrega(e.target.value)}
+                                    />
+                                </Grid>
                             </Grid>
+                        </CardContent>
+                    </Card>
 
-                            {/* Selector PRODUCTO */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    select
-                                    label="Producto Requerido"
-                                    name="IdProducto"
-                                    fullWidth
-                                    required
-                                    variant="outlined"
-                                    value={pedido.IdProducto}
-                                    onChange={handleChange}
-                                >
-                                    {productosList.map((p) => (
-                                        <MenuItem key={p.id} value={p.id}>{p.nombre}</MenuItem>
-                                    ))}
-                                </TextField>
+                    <Card sx={{ p: 2 }}>
+                        <CardContent>
+                            <Typography variant="h6" gutterBottom>2. ¿Qué necesita?</Typography>
+                            <Grid container spacing={2}>
+                                <Grid item xs={12}>
+                                    <TextField select label="Tipo" fullWidth value={tipoItem} onChange={(e) => setTipoItem(e.target.value)}>
+                                        <MenuItem value="planta">Planta</MenuItem>
+                                        <MenuItem value="producto">Producto</MenuItem>
+                                    </TextField>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField select label="Artículo" fullWidth value={idItemSel} onChange={(e) => setIdItemSel(e.target.value)}>
+                                        {getListaActual().map(item => (
+                                            <MenuItem key={item.id_planta || item.id_producto} value={item.id_planta || item.id_producto}>
+                                                {item.name_planta || item.name_producto}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <TextField select label="Proveedor (Para conseguirlo)" fullWidth value={idProvSel} onChange={(e) => setIdProvSel(e.target.value)}>
+                                        {proveedores.map(p => (
+                                            <MenuItem key={p.id_proveedor} value={p.id_proveedor}>
+                                                {p.name_proveedor}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <TextField label="Cantidad" type="number" fullWidth value={cantidad} onChange={(e) => setCantidad(e.target.value)} />
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <TextField label="Precio Cotizado ($)" type="number" fullWidth value={precio} onChange={(e) => setPrecio(e.target.value)} />
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Button variant="contained" fullWidth startIcon={<AddShoppingCartIcon />} onClick={handleAgregarItem} sx={{bgcolor: '#7b1fa2'}}>
+                                        Agregar Encargo
+                                    </Button>
+                                </Grid>
                             </Grid>
+                        </CardContent>
+                    </Card>
+                </Grid>
 
-                            {/* Unidades (Cantidad) */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField 
-                                    label="Cantidad (Unidades)" 
-                                    name="Unidades" 
-                                    type="number"
-                                    fullWidth 
-                                    required 
-                                    variant="outlined"
-                                    value={pedido.Unidades}
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
+                <Grid item xs={12} md={7}>
+                    <Card sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <CardContent sx={{ flexGrow: 1 }}>
+                            <Typography variant="h6" gutterBottom>Resumen del Pedido</Typography>
+                            <TableContainer component={Paper} sx={{ maxHeight: 400, mb: 2, bgcolor:'#f3e5f5' }}>
+                                <Table size="small">
+                                    <TableHead>
+                                        <TableRow>
+                                            <TableCell>Cant.</TableCell>
+                                            <TableCell>Descripción</TableCell>
+                                            <TableCell>Surte</TableCell>
+                                            <TableCell align="right">Subtotal</TableCell>
+                                            <TableCell></TableCell>
+                                        </TableRow>
+                                    </TableHead>
+                                    <TableBody>
+                                        {carrito.map((row) => (
+                                            <TableRow key={row.uniqueId}>
+                                                <TableCell>{row.cantidad}</TableCell>
+                                                <TableCell>
+                                                    {row.nombre} <br/>
+                                                    <Typography variant="caption" color="textSecondary">({row.type})</Typography>
+                                                </TableCell>
+                                                <TableCell>{row.nombre_proveedor}</TableCell>
+                                                <TableCell align="right">${row.subtotal}</TableCell>
+                                                <TableCell>
+                                                    <IconButton size="small" color="error" onClick={() => handleEliminarItem(row.uniqueId)}>
+                                                        <DeleteIcon fontSize="small" />
+                                                    </IconButton>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </TableContainer>
 
-                            {/* Selector PROVEEDOR */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField
-                                    select
-                                    label="Proveedor Asignado"
-                                    name="IdProveedor"
-                                    fullWidth
-                                    required
-                                    variant="outlined"
-                                    value={pedido.IdProveedor}
-                                    onChange={handleChange}
-                                    helperText="¿A quién le pediremos el stock?"
-                                >
-                                    {proveedoresList.map((prov) => (
-                                        <MenuItem key={prov.id} value={prov.id}>{prov.nombre}</MenuItem>
-                                    ))}
-                                </TextField>
-                            </Grid>
-
-                            {/* Timeout (Fecha Entrega) */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField 
-                                    label="Fecha Estimada de Entrega (Timeout)" 
-                                    name="Timeout" 
-                                    type="date"
-                                    fullWidth 
-                                    required 
-                                    InputLabelProps={{ shrink: true }}
-                                    value={pedido.Timeout}
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-
-                            {/* Botones */}
-                            <Grid item xs={12} sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end', mt: 3 }}>
-                                <Button variant="outlined" color="secondary" startIcon={<ArrowBackIcon />} onClick={() => navigate('/pedidos')}>
-                                    Cancelar
-                                </Button>
+                            <Box sx={{ mt: 'auto', borderTop: '1px solid #ddd', pt: 2 }}>
+                                <Typography variant="h5" align="right" sx={{ fontWeight: 'bold', color: '#7b1fa2', mb: 2 }}>
+                                    Total: ${calcularTotal().toFixed(2)}
+                                </Typography>
                                 <Button 
-                                    type="submit" 
-                                    variant="contained" 
-                                    startIcon={<SaveIcon />}
-                                    sx={{ backgroundColor: '#7b1fa2', '&:hover': { backgroundColor: '#4a0072' } }}
+                                    variant="contained" size="large" fullWidth startIcon={<SaveIcon />} 
+                                    onClick={handleSubmit} sx={{ bgcolor: '#4a0072' }}
+                                    disabled={carrito.length === 0}
                                 >
-                                    Registrar Pedido
+                                    Confirmar Encargo
                                 </Button>
-                            </Grid>
-
-                        </Grid>
-                    </form>
-                </CardContent>
-            </Card>
+                            </Box>
+                        </CardContent>
+                    </Card>
+                </Grid>
+            </Grid>
         </Container>
     );
 }

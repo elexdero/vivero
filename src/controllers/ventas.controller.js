@@ -1,35 +1,91 @@
 import { pool } from '../db.js';
 
-export const mostrarVentas = async(req, res) =>{
+// 1. MOSTRAR VENTAS (Sin nombre de cliente)
+export const mostrarVentas = async (req, res, next) => {
     try {
-        const { rows } = await pool.query(`
-            SELECT v.idventa, v.fecha, v.total, c.namecliente, c.appatcliente
-            FROM ventas v
-            JOIN clientes c ON v.idcliente = c.idcliente
-            ORDER BY v.fecha DESC
+        const result = await pool.query(`
+            SELECT 
+                id_venta, 
+                fecha_venta, 
+                total_venta, 
+                forma_pago
+            FROM ventas 
+            ORDER BY fecha_venta DESC
         `);
-        res.json(rows);
+        res.json(result.rows);
     } catch (error) {
-        res.status(500).json({ message: error.message });
+        next(error);
     }
 };
 
-
-export const generarVenta = async (req, res) => {
+// 2. GENERAR VENTA (Sin id_cliente)
+export const generarVenta = async (req, res, next) => {
+    const client = await pool.connect(); 
+    
     try {
-        const { idCliente, fecha, total, detalles } = req.body;
-        const nuevaVenta = await pool.query(
-            `INSERT INTO ventas (idcliente, fecha, total) 
-             VALUES ($1, $2, $3) RETURNING *`,
-            [idCliente, fecha, total]
+        // CAMBIO: Ya no extraemos id_cliente del body
+        const { forma_pago, total_venta, detalles } = req.body;
+
+        await client.query('BEGIN');
+
+        // CAMBIO: Insertamos solo forma_pago y total
+        const ventaResult = await client.query(
+            `INSERT INTO ventas (forma_pago, total_venta) 
+             VALUES ($1, $2) RETURNING id_venta`,
+            [forma_pago, total_venta]
         );
-        const idVentaGenerado = nuevaVenta.rows[0].idventa;
-        res.json({ 
-            message: 'Venta registrada con éxito', 
-            venta: nuevaVenta.rows[0] 
-        });
+        const idVenta = ventaResult.rows[0].id_venta;
+
+        // B. Insertar Detalles (Esto sigue igual)
+        for (const item of detalles) {
+            let id_planta = null;
+            let id_producto = null;
+            let id_servicio = null;
+
+            if (item.type === 'planta') {
+                id_planta = item.id;
+                await client.query('UPDATE plantas SET stock = stock - $1 WHERE id_planta = $2', [item.cantidad, id_planta]);
+            } else if (item.type === 'producto') {
+                id_producto = item.id;
+                await client.query('UPDATE productos SET stock = stock - $1 WHERE id_producto = $2', [item.cantidad, id_producto]);
+            } else if (item.type === 'servicio') {
+                id_servicio = item.id;
+            }
+
+            await client.query(
+                `INSERT INTO detalle_ventas 
+                (id_venta, id_planta, id_producto, id_servicio, cantidad, precio_unitario, subtotal)
+                VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+                [idVenta, id_planta, id_producto, id_servicio, item.cantidad, item.precio, item.subtotal]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({ message: 'Venta registrada con éxito', id_venta: idVenta });
 
     } catch (error) {
-        res.status(500).json({ message: "Error al registrar la venta: " + error.message });
+        await client.query('ROLLBACK');
+        console.error("Error en transacción:", error);
+        res.status(500).json({ message: "Error al registrar venta: " + error.message });
+    } finally {
+        client.release();
+    }
+};
+
+// 3. OBTENER DETALLE (Igual que antes)
+export const obtenerDetalleVenta = async (req, res, next) => {
+    try {
+        const { id } = req.params;
+        const result = await pool.query(`
+            SELECT d.*, p.name_planta, prod.name_producto, serv.name_servicio
+            FROM detalle_ventas d
+            LEFT JOIN plantas p ON d.id_planta = p.id_planta
+            LEFT JOIN productos prod ON d.id_producto = prod.id_producto
+            LEFT JOIN otros_servicios serv ON d.id_servicio = serv.id_servicio
+            WHERE d.id_venta = $1
+        `, [id]);
+        res.json(result.rows);
+    } catch (error) {
+        next(error);
     }
 };

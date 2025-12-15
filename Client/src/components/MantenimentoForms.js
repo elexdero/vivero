@@ -1,65 +1,50 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Button, 
-    TextField, 
-    Grid, 
-    Card, 
-    CardContent, 
-    Typography, 
-    Container, 
-    MenuItem,
-    Box,
-    CircularProgress,
-    Alert
+    Container, Typography, Box, TextField, Button, Paper, Grid, 
+    MenuItem, Select, FormControl, InputLabel, Alert, CircularProgress 
 } from '@mui/material';
 import SaveIcon from '@mui/icons-material/Save';
-import LocalFloristIcon from '@mui/icons-material/LocalFlorist'; 
-import EngineeringIcon from '@mui/icons-material/Engineering'; 
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 
-export default function MantenimientoForms() {
+export default function MantenimientoForm() {
     const navigate = useNavigate();
-
-    // 1. Estado del formulario (Coincide con tu tabla de BD)
-    const [mantenimiento, setMantenimiento] = useState({
-        IDPlanta: '',
-        IdPersonal: '',
-        freqRiego: '',
-        typeFertilizacion: '',
-        obsEjemplar: ''
+    
+    // Estado del formulario
+    const [formData, setFormData] = useState({
+        id_planta: '',
+        id_personal: '',
+        freq_riego: '',
+        type_fertilizacion: '',
+        obs_ejemplar: ''
     });
 
-    // 2. ESTADOS PARA LOS CATÁLOGOS REALES (Vacíos al inicio)
-    const [listaPlantas, setListaPlantas] = useState([]);
-    const [listaTrabajadores, setListaTrabajadores] = useState([]);
+    // Estados para las listas desplegables
+    const [plantas, setPlantas] = useState([]);
+    const [trabajadores, setTrabajadores] = useState([]);
+    
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+    const [error, setError] = useState('');
 
-    // 3. CARGAR DATOS DEL BACKEND AL INICIAR
+    const API_URL = 'http://localhost:4000/api';
+
+    // CARGAR LISTAS (Plantas y Trabajadores)
     useEffect(() => {
         const cargarDatos = async () => {
             try {
-                // Hacemos las dos peticiones al mismo tiempo
+                // Hacemos las dos peticiones en paralelo
                 const [resPlantas, resTrabajadores] = await Promise.all([
-                    fetch('http://localhost:4000/api/plantas'),
-                    fetch('http://localhost:4000/api/trabajadores') // Asegúrate de tener esta ruta creada
+                    fetch(`${API_URL}/plantas`),       // Asegúrate de tener esta ruta
+                    fetch(`${API_URL}/trabajadores`)   // Esta ya la tienes
                 ]);
 
-                if (!resPlantas.ok || !resTrabajadores.ok) {
-                    throw new Error("Error al cargar listas del servidor");
-                }
-
-                const dataPlantas = await resPlantas.json();
-                const dataTrabajadores = await resTrabajadores.json();
-
-                // Guardamos los datos reales
-                setListaPlantas(dataPlantas);
-                setListaTrabajadores(dataTrabajadores);
-                setLoading(false);
+                if (resPlantas.ok) setPlantas(await resPlantas.json());
+                if (resTrabajadores.ok) setTrabajadores(await resTrabajadores.json());
 
             } catch (err) {
-                console.error(err);
-                setError("No se pudo conectar con la base de datos.");
+                console.error("Error cargando listas:", err);
+                setError("No se pudieron cargar las listas de plantas o trabajadores.");
+            } finally {
                 setLoading(false);
             }
         };
@@ -68,138 +53,137 @@ export default function MantenimientoForms() {
     }, []);
 
     const handleChange = (e) => {
-        setMantenimiento({ ...mantenimiento, [e.target.name]: e.target.value });
+        setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
         try {
-            // Enviamos los datos reales al backend
-            const response = await fetch('http://localhost:4000/api/mantenimientos/new', {
+            const res = await fetch(`${API_URL}/mantenimientos`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(mantenimiento)
+                body: JSON.stringify(formData)
             });
 
-            if (response.ok) {
-                alert("Mantenimiento registrado con éxito");
-                navigate('/mantenimientos'); // Regresar a la lista
-            } else {
-                alert("Error al guardar mantenimiento");
-            }
-        } catch (error) {
-            console.error(error);
-            alert("Error de conexión");
+            if (!res.ok) throw new Error("Error al registrar el mantenimiento");
+
+            navigate('/mantenimientos'); // Volver a la tabla
+        } catch (err) {
+            setError(err.message);
         }
     };
 
-    if (loading) return <Container sx={{ mt: 5, textAlign: 'center' }}><CircularProgress /></Container>;
+    if (loading) return <Box sx={{p:5, textAlign:'center'}}><CircularProgress /></Box>;
 
     return (
-        <Container maxWidth="md" sx={{ mb: 4 }}>
-            <Card sx={{ mt: 5, padding: 2, borderLeft: '6px solid #ff9800' }}> 
-                <CardContent>
-                    <Typography variant="h5" gutterBottom sx={{ textAlign: 'center', fontWeight: 'bold', color: '#e65100' }}>
-                        Registro de Mantenimiento
-                    </Typography>
-                    
-                    {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
+        <Container maxWidth="md" sx={{ mt: 4 }}>
+            <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/mantenimientos')} sx={{ mb: 2 }}>
+                Volver a la bitácora
+            </Button>
+            
+            <Paper sx={{ p: 4 }} elevation={3}>
+                <Typography variant="h5" color="primary" gutterBottom sx={{ fontWeight: 'bold' }}>
+                    Registrar Mantenimiento
+                </Typography>
 
-                    <form onSubmit={handleSubmit}>
-                        <Grid container spacing={3}>
+                {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
-                            {/* Selector de PLANTA */}
-                            <Grid item xs={12} sm={6}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                                    <LocalFloristIcon sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-                                    <TextField
-                                        select
-                                        label="Seleccionar Planta"
-                                        name="IDPlanta"
-                                        fullWidth
-                                        required
-                                        variant="standard"
-                                        value={mantenimiento.IDPlanta}
-                                        onChange={handleChange}
-                                    >
-                                        {listaPlantas.map((planta) => (
-                                            // Usamos los nombres reales de tu BD (minúsculas)
-                                            <MenuItem key={planta.idplanta} value={planta.idplanta}>
-                                                {planta.nameplanta} ({planta.typeplanta})
-                                            </MenuItem>
-                                        ))}
-                                    </TextField>
-                                </Box>
-                            </Grid>
-
-                            {/* Selector de TRABAJADOR */}
-                            <Grid item xs={12} sm={6}>
-                                <Box sx={{ display: 'flex', alignItems: 'flex-end' }}>
-                                    <EngineeringIcon sx={{ color: 'action.active', mr: 1, my: 0.5 }} />
-                                    <TextField
-                                        select
-                                        label="Encargado"
-                                        name="IdPersonal"
-                                        fullWidth
-                                        required
-                                        variant="standard"
-                                        value={mantenimiento.IdPersonal}
-                                        onChange={handleChange}
-                                    >
-                                        {listaTrabajadores.map((trab) => (
-                                            // Ajusta nombres según tu tabla 'trabajadores'
-                                            <MenuItem key={trab.idpersonal} value={trab.idpersonal}>
-                                                {trab.nameempleado} - {trab.puestoemp}
-                                            </MenuItem>
-                                        ))}
-                                    </TextField>
-                                </Box>
-                            </Grid>
-
-                            {/* ... Resto de campos (Riego, Fertilización, Observaciones) ... */}
-                            <Grid item xs={12} sm={6}>
-                                <TextField 
-                                    label="Frecuencia de Riego" 
-                                    name="freqRiego" 
-                                    fullWidth required variant="outlined" 
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-                            <Grid item xs={12} sm={6}>
-                                <TextField 
-                                    label="Tipo de Fertilización" 
-                                    name="typeFertilizacion" 
-                                    fullWidth required variant="outlined" 
-                                    onChange={handleChange} 
-                                />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField
-                                    label="Observaciones"
-                                    name="obsEjemplar"
-                                    multiline rows={4} fullWidth required variant="outlined"
+                <form onSubmit={handleSubmit}>
+                    <Grid container spacing={2}>
+                        
+                        {/* SELECCIÓN DE PLANTA */}
+                        <Grid item xs={12} md={6}>
+                            <FormControl fullWidth required>
+                                <InputLabel>Planta / Ejemplar</InputLabel>
+                                <Select
+                                    name="id_planta"
+                                    value={formData.id_planta}
+                                    label="Planta / Ejemplar"
                                     onChange={handleChange}
-                                />
-                            </Grid>
-
-                            {/* Botón Guardar */}
-                            <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
-                                <Button 
-                                    type="submit" 
-                                    variant="contained" 
-                                    size="large"
-                                    startIcon={<SaveIcon />}
-                                    sx={{ backgroundColor: '#e65100', '&:hover': { backgroundColor: '#ef6c00' } }}
                                 >
-                                    Guardar Registro
-                                </Button>
-                            </Grid>
-
+                                    {plantas.map((p) => (
+                                        // Ajusta 'id_planta' y 'name_planta' según tu DB exacta
+                                        <MenuItem key={p.id_planta} value={p.id_planta}>
+                                            {p.name_planta} (ID: {p.id_planta})
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                         </Grid>
-                    </form>
-                </CardContent>
-            </Card>
+
+                        {/* SELECCIÓN DE TRABAJADOR */}
+                        <Grid item xs={12} md={6}>
+                            <FormControl fullWidth required>
+                                <InputLabel>Encargado del Mantenimiento</InputLabel>
+                                <Select
+                                    name="id_personal"
+                                    value={formData.id_personal}
+                                    label="Encargado del Mantenimiento"
+                                    onChange={handleChange}
+                                >
+                                    {trabajadores.map((t) => (
+                                        // AQUI ES EL CAMBIO CLAVE:
+                                        // Usamos t.id_trabajador, t.name_trabajador, etc.
+                                        <MenuItem key={t.id_trabajador} value={t.id_trabajador}>
+                                            {t.name_trabajador} {t.ap_pat_trabajador}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+
+                        <Grid item xs={6}>
+                            <TextField 
+                                label="Frecuencia de Riego" 
+                                placeholder="Ej: Diario, Cada 3 días"
+                                fullWidth 
+                                name="freq_riego" 
+                                value={formData.freq_riego} 
+                                onChange={handleChange} 
+                                required 
+                            />
+                        </Grid>
+                        
+                        <Grid item xs={6}>
+                            <TextField 
+                                label="Tipo de Fertilización" 
+                                placeholder="Ej: Orgánica, Química"
+                                fullWidth 
+                                name="type_fertilizacion" 
+                                value={formData.type_fertilizacion} 
+                                onChange={handleChange} 
+                                required 
+                            />
+                        </Grid>
+
+                        <Grid item xs={12}>
+                            <TextField 
+                                label="Observaciones / Estado de Salud" 
+                                placeholder="Describe el estado de la planta..."
+                                fullWidth 
+                                multiline
+                                rows={3}
+                                name="obs_ejemplar" 
+                                value={formData.obs_ejemplar} 
+                                onChange={handleChange} 
+                            />
+                        </Grid>
+
+                        <Grid item xs={12} sx={{ mt: 2 }}>
+                            <Button 
+                                type="submit" 
+                                variant="contained" 
+                                fullWidth 
+                                size="large"
+                                startIcon={<SaveIcon />}
+                                sx={{ bgcolor: '#0277bd' }}
+                            >
+                                Guardar Mantenimiento
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </form>
+            </Paper>
         </Container>
     );
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
     Box, 
@@ -11,50 +11,71 @@ import {
     Chip,
     IconButton,
     Tooltip,
-    Divider
+    Divider,
+    CircularProgress,
+    Alert
 } from '@mui/material';
 import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
-import EditIcon from '@mui/icons-material/Edit';
-import DeleteIcon from '@mui/icons-material/Delete';
-import AccessTimeIcon from '@mui/icons-material/AccessTime'; // Para el tiempo de entrega
+import CheckCircleIcon from '@mui/icons-material/CheckCircle'; // Icono para recibir
+import AccessTimeIcon from '@mui/icons-material/AccessTime'; 
 import LocalShippingIcon from '@mui/icons-material/LocalShipping';
 import InventoryIcon from '@mui/icons-material/Inventory';
+import MonetizationOnIcon from '@mui/icons-material/MonetizationOn';
 
 export default function PedidosList() {
     const navigate = useNavigate();
+    const [pedidos, setPedidos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // 1. Datos Simulados (Mock Data)
-    const [pedidos, setPedidos] = useState([
-        {
-            idVenta: 501,
-            IdCliente: 101,
-            NombreCliente: "Juan Pérez",      // JOIN simulado
-            IdProducto: 502,
-            NombreProducto: "Fertilizante X", // JOIN simulado
-            Unidades: 10,
-            IdProveedor: 1,
-            NombreProveedor: "Fertilizantes del Norte", // JOIN simulado
-            Timeout: "2024-03-20" // Fecha estimada de llegada
-        },
-        {
-            idVenta: 502,
-            IdCliente: 102,
-            NombreCliente: "María González",
-            IdProducto: 501,
-            NombreProducto: "Maceta Barro #5",
-            Unidades: 50,
-            IdProveedor: 2,
-            NombreProveedor: "Macetas López",
-            Timeout: "2024-03-25"
+    // 1. Cargar Pedidos del Backend
+    const cargarPedidos = async () => {
+        try {
+            const res = await fetch('http://localhost:4000/api/pedidos');
+            if (res.ok) {
+                const data = await res.json();
+                setPedidos(data);
+            } else {
+                setError("Error al cargar la lista de pedidos");
+            }
+            setLoading(false);
+        } catch (err) {
+            console.error(err);
+            setError("No se pudo conectar con el servidor");
+            setLoading(false);
         }
-    ]);
+    };
 
-    // Función Eliminar (Cancelar Pedido)
-    const handleDelete = (id) => {
-        if(window.confirm("¿Cancelar este pedido pendiente?")) {
-            const nuevaLista = pedidos.filter(p => p.idVenta !== id);
-            setPedidos(nuevaLista);
+    useEffect(() => {
+        cargarPedidos();
+    }, []);
+
+    // 2. Función para RECIBIR MERCANCÍA (Actualiza Stock)
+    const handleRecibir = async (id) => {
+        if(!window.confirm("¿Confirmar que llegó la mercancía? Esto sumará el stock al inventario.")) return;
+
+        try {
+            const res = await fetch(`http://localhost:4000/api/pedidos/${id}/recibir`, {
+                method: 'PUT'
+            });
+
+            if (res.ok) {
+                alert("¡Stock actualizado correctamente!");
+                cargarPedidos(); // Recargamos para ver el cambio de estado
+            } else {
+                const data = await res.json();
+                alert("Error: " + data.message);
+            }
+        } catch (error) {
+            console.error(error);
+            alert("Error de conexión");
         }
+    };
+
+    // Formatear fecha bonita
+    const formatDate = (dateString) => {
+        if(!dateString) return "N/D";
+        return new Date(dateString).toLocaleDateString();
     };
 
     return (
@@ -68,7 +89,7 @@ export default function PedidosList() {
                 marginBottom: 4
             }}>
                 <Typography variant="h4" sx={{ color: '#7b1fa2', fontWeight: 'bold' }}>
-                    Pedidos Pendientes (Stock)
+                    Pedidos a Proveedores
                 </Typography>
 
                 <Button 
@@ -81,68 +102,99 @@ export default function PedidosList() {
                 </Button>
             </Box>
 
+            {loading && <Box sx={{display:'flex', justifyContent:'center'}}><CircularProgress color="secondary"/></Box>}
+            {error && <Alert severity="error">{error}</Alert>}
+
             {/* --- GRID DE PEDIDOS --- */}
             <Grid container spacing={3}>
-                {pedidos.map((pedido) => (
-                    <Grid item xs={12} md={6} lg={4} key={pedido.idVenta}>
+                {!loading && pedidos.map((pedido) => (
+                    <Grid item xs={12} md={6} lg={4} key={pedido.id_pedido}>
                         <Card sx={{ 
                             height: '100%', 
-                            borderLeft: '6px solid #9c27b0', // Morado
+                            // Si ya está recibido, borde verde. Si es pendiente, borde morado.
+                            borderLeft: pedido.estado === 'Recibido' ? '6px solid #2e7d32' : '6px solid #9c27b0', 
                             boxShadow: 3,
                             position: 'relative'
                         }}>
                             <CardContent>
-                                {/* Encabezado: Producto y Cantidad */}
+                                {/* Encabezado: Proveedor */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                                    <InventoryIcon sx={{ color: '#7b1fa2', mr: 1 }} />
+                                    <LocalShippingIcon sx={{ color: '#7b1fa2', mr: 1 }} />
                                     <Typography variant="h6" component="div" sx={{ fontWeight: 'bold' }}>
-                                        {pedido.NombreProducto}
+                                        {pedido.name_proveedor}
                                     </Typography>
                                 </Box>
+                                
                                 <Typography variant="body2" sx={{ mb: 2, ml: 4, color: '#4a148c', fontWeight: 'bold' }}>
-                                    Cantidad solicitada: {pedido.Unidades} pzas.
+                                    Folio: #{pedido.id_pedido}
                                 </Typography>
 
                                 <Divider sx={{ mb: 2 }} />
 
-                                {/* Detalles: Cliente y Proveedor */}
-                                <Typography variant="body2" sx={{ mb: 0.5 }}>
-                                    <strong>Cliente:</strong> {pedido.NombreCliente}
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, color: 'text.secondary' }}>
-                                    <LocalShippingIcon fontSize="small" sx={{ mr: 0.5 }} />
-                                    <Typography variant="caption">
-                                        Proveedor: {pedido.NombreProveedor}
+                                {/* Detalles: Total y Fecha */}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
+                                    <Typography variant="body2">
+                                        <strong>Total Estimado:</strong>
+                                    </Typography>
+                                    <Chip 
+                                        icon={<MonetizationOnIcon />} 
+                                        label={`$${pedido.total_estimado}`} 
+                                        size="small" 
+                                        variant="outlined"
+                                        color="secondary"
+                                    />
+                                </Box>
+
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                    <Typography variant="body2">
+                                        <strong>Fecha Entrega:</strong>
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        {formatDate(pedido.fecha_entrega)}
                                     </Typography>
                                 </Box>
 
-                                {/* Fecha de Entrega (Timeout) */}
+                                {/* Estado del Pedido */}
                                 <Chip 
-                                    icon={<AccessTimeIcon />} 
-                                    label={`Llega: ${pedido.Timeout}`} 
-                                    color="secondary" 
-                                    variant="outlined" 
-                                    sx={{ width: '100%', justifyContent: 'center' }}
+                                    icon={pedido.estado === 'Recibido' ? <InventoryIcon /> : <AccessTimeIcon />} 
+                                    label={pedido.estado} 
+                                    color={pedido.estado === 'Recibido' ? "success" : "warning"} 
+                                    sx={{ width: '100%', justifyContent: 'center', mb: 2 }}
                                 />
 
                                 {/* Botones de Acción */}
                                 <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 2 }}>
-                                    <Tooltip title="Editar Pedido">
-                                        <IconButton size="small" color="primary" onClick={() => navigate(`/pedidos/edit/${pedido.idVenta}`)}>
-                                            <EditIcon />
-                                        </IconButton>
-                                    </Tooltip>
-                                    <Tooltip title="Cancelar Pedido">
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(pedido.idVenta)}>
-                                            <DeleteIcon />
-                                        </IconButton>
-                                    </Tooltip>
+                                    {pedido.estado === 'Pendiente' && (
+                                        <Tooltip title="Confirmar Recepción (Sumar al Stock)">
+                                            <Button 
+                                                size="small" 
+                                                variant="contained" 
+                                                color="success" 
+                                                startIcon={<CheckCircleIcon />}
+                                                onClick={() => handleRecibir(pedido.id_pedido)}
+                                            >
+                                                Recibir
+                                            </Button>
+                                        </Tooltip>
+                                    )}
+                                    
+                                    {pedido.estado === 'Recibido' && (
+                                        <Typography variant="caption" color="green" sx={{fontStyle:'italic'}}>
+                                            Stock actualizado
+                                        </Typography>
+                                    )}
                                 </Box>
 
                             </CardContent>
                         </Card>
                     </Grid>
                 ))}
+
+                {!loading && pedidos.length === 0 && (
+                    <Container sx={{textAlign:'center', mt:5}}>
+                        <Typography color="text.secondary">No hay pedidos registrados.</Typography>
+                    </Container>
+                )}
             </Grid>
         </Container>
     );

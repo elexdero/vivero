@@ -108,7 +108,7 @@ export default function PlantasList() {
 
             {/* --- BARRA DE HERRAMIENTAS (BUSCADOR + FILTRO) --- */}
             <Grid container spacing={2} sx={{ mb: 4 }}>
-                <Grid item xs={10} sm={6}>
+                <Grid item xs={12} sm={4}>
                     <TextField 
                         fullWidth
                         variant="outlined"
@@ -126,7 +126,7 @@ export default function PlantasList() {
                     />
                 </Grid>
 
-                <Grid item xs={12} sm={4}>
+                <Grid item xs={12} sm={8}>
                     <TextField
                         select
                         fullWidth
@@ -168,6 +168,10 @@ export default function PlantasList() {
                         const riego = planta.frecuencia_riego || "N/D";
                         const precio = planta.precio_planta || 0;
                         const luz = planta.tipoluz || planta.type_luz || "N/D";
+                        
+                        // --- DATOS NUEVOS ---
+                        const stock = planta.stock || 0;
+                        const proveedor = planta.name_proveedor || "Sin Asignar"; // Leemos el nombre del proveedor
 
                         return (
                             <Grid item xs={12} sm={6} md={4} key={id}>
@@ -189,6 +193,18 @@ export default function PlantasList() {
                                             <strong>Tipo:</strong> {tipo} <br />
                                             <strong>Luz:</strong> {luz} <br />
                                             <strong>Riego:</strong> {riego} <br />
+                                            
+                                            {/* --- MUESTRA EL PROVEEDOR AQUÍ --- */}
+                                            <strong>Proveedor:</strong> {proveedor} <br />
+
+                                            {/* --- MUESTRA EL STOCK AQUÍ --- */}
+                                            <strong>Existencias: </strong>
+                                            <span style={{ 
+                                                color: stock < 5 ? '#d32f2f' : 'inherit', 
+                                                fontWeight: stock < 5 ? 'bold' : 'normal' 
+                                            }}>
+                                                {stock} unidades
+                                            </span>
                                         </Typography>
 
                                         <Chip 
@@ -201,16 +217,16 @@ export default function PlantasList() {
                                     </CardContent>
 
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', p: 2, bgcolor: '#f1f8e9' }}>
-                                        <Tooltip title="Editar">
-                                            <IconButton color="secondary" onClick={() => navigate(`/plantas/edit/${id}`)}>
-                                                <EditIcon />
-                                            </IconButton>
-                                        </Tooltip>
-                                        <Tooltip title="Eliminar">
-                                            <IconButton color="error" onClick={() => handleDelete(id)}>
-                                                <DeleteIcon />
-                                            </IconButton>
-                                        </Tooltip>
+                                            <Tooltip title="Editar">
+                                                <IconButton color="secondary" onClick={() => navigate(`/plantas/edit/${id}`)}>
+                                                    <EditIcon />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Eliminar">
+                                                <IconButton color="error" onClick={() => handleDelete(id)}>
+                                                    <DeleteIcon />
+                                                </IconButton>
+                                            </Tooltip>
                                     </Box>
                                 </Card>
                             </Grid>

@@ -1,201 +1,150 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
-    Box, 
-    Button, 
-    Grid, 
-    Card, 
-    CardContent, 
-    CardActions,
-    Typography, 
-    Container, 
-    Chip,
-    IconButton,
-    Tooltip,
-    Divider
+    Box, Button, Grid, Card, CardContent, CardActions, Typography, Container, 
+    Chip, IconButton, Tooltip, Divider, CircularProgress, Alert 
 } from '@mui/material';
-// Importación de Iconos
 import EventIcon from '@mui/icons-material/Event'; 
 import ClassIcon from '@mui/icons-material/Class'; 
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import GroupIcon from '@mui/icons-material/Group';
-import PersonIcon from '@mui/icons-material/Person';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+
+// Definir la URL base fuera del componente para fácil cambio
+const API_URL = 'http://localhost:4000/api/eventos';
 
 export default function EventosList() {
     const navigate = useNavigate();
+    const [eventos, setEventos] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
-    // 1. Datos Completos para llenar la tabla
-    const [eventos, setEventos] = useState([
-        {
-            IdEvento: 1,
-            NomCurse: "Taller de Terrarios Eternos",
-            DesEvento: "Aprende a crear ecosistemas autosustentables en frascos de vidrio. Incluye materiales y plantas.",
-            DateEvento: "2024-03-10",
-            CostEvento: 650.00,
-            MaxPersonas: 12,
-            IdCliente: 101,
-            NombreCliente: "Ana García"
-        },
-        {
-            IdEvento: 2,
-            NomCurse: "Curso de Poda y Injertos",
-            DesEvento: "Técnicas profesionales para podar frutales y rosales sin dañar la planta. Práctica en vivo.",
-            DateEvento: "2024-03-18",
-            CostEvento: 450.00,
-            MaxPersonas: 20,
-            IdCliente: 102,
-            NombreCliente: "Carlos López"
-        },
-        {
-            IdEvento: 3,
-            NomCurse: "Huertos Urbanos para Principiantes",
-            DesEvento: "Todo lo que necesitas saber para cultivar tus propias hortalizas en macetas o espacios pequeños.",
-            DateEvento: "2024-04-05",
-            CostEvento: 300.00,
-            MaxPersonas: 25,
-            IdCliente: 103,
-            NombreCliente: "María Rodríguez"
-        },
-        {
-            IdEvento: 4,
-            NomCurse: "Control de Plagas Orgánico",
-            DesEvento: "Aprende a identificar y combatir pulgones, cochinillas y hongos usando remedios caseros y ecológicos.",
-            DateEvento: "2024-04-12",
-            CostEvento: 250.00,
-            MaxPersonas: 30,
-            IdCliente: 104,
-            NombreCliente: "Pedro Martínez"
-        },
-        {
-            IdEvento: 5,
-            NomCurse: "Cuidados Básicos de Orquídeas",
-            DesEvento: "Clase magistral sobre riego, iluminación y trasplante de orquídeas Phalaenopsis.",
-            DateEvento: "2024-05-01",
-            CostEvento: 500.00,
-            MaxPersonas: 15,
-            IdCliente: 105,
-            NombreCliente: "Lucía Fernández"
-        }
-    ]);
-
-    // 2. Función Eliminar
-    const handleDelete = (id) => {
-        if(window.confirm("¿Deseas cancelar este evento y eliminarlo de la agenda?")) {
-            const nuevaLista = eventos.filter(e => e.IdEvento !== id);
-            setEventos(nuevaLista);
+    const cargarEventos = async () => {
+        try {
+            const res = await fetch(API_URL);
+            if (!res.ok) throw new Error("Error al cargar eventos");
+            
+            const data = await res.json();
+            setEventos(data);
+        } catch (err) {
+            console.error(err);
+            setError(err.message);
+        } finally {
+            // El finally se ejecuta siempre, haya error o no
+            setLoading(false);
         }
     };
 
+    useEffect(() => {
+        cargarEventos();
+    }, []);
+
+    const handleDelete = async (id) => {
+        // Idealmente aquí usarías un Dialog de Material UI, pero window.confirm es funcional
+        if(window.confirm("¿Eliminar este evento de forma permanente?")) {
+            try {
+                const res = await fetch(`${API_URL}/delete/${id}`, { method: 'DELETE' });
+                if (!res.ok) throw new Error("Error al eliminar");
+
+                // Actualizamos el estado local para no tener que recargar la página
+                // ASUMIENDO que la ID en base de datos es 'id_evento'
+                setEventos(prev => prev.filter(e => e.id_evento !== id));
+            } catch (error) {
+                console.error(error);
+                alert("No se pudo eliminar el evento");
+            }
+        }
+    };
+
+    const formatearFecha = (fechaString) => {
+        if(!fechaString) return "Sin fecha";
+        // Opción: 'es-MX' para formato local de México
+        return new Date(fechaString).toLocaleDateString('es-MX', {
+            year: 'numeric', month: 'long', day: 'numeric'
+        });
+    };
+
+    if (loading) {
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 10 }}>
+                <CircularProgress color="success" />
+            </Box>
+        );
+    }
+
     return (
         <Container maxWidth="lg">
-            {/* --- ENCABEZADO --- */}
-            <Box sx={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginTop: 4,
-                marginBottom: 4
-            }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 4, mb: 4 }}>
                 <Typography variant="h4" sx={{ color: '#2e7d32', fontWeight: 'bold' }}>
-                    Agenda de Cursos y Talleres
+                    Gestión de Eventos
                 </Typography>
-
                 <Button 
                     variant="contained" 
                     startIcon={<ClassIcon />}
                     onClick={() => navigate('/eventos/new')} 
                     sx={{ backgroundColor: '#2e7d32', '&:hover': { backgroundColor: '#1b5e20' } }}
                 >
-                    Crear Evento
+                    Nuevo Evento
                 </Button>
             </Box>
 
-            {/* --- GRID DE EVENTOS --- */}
+            {error && <Alert severity="error" sx={{ mb: 3 }}>{error}</Alert>}
+
+            {!error && eventos.length === 0 && (
+                <Alert severity="info">No hay eventos registrados en el sistema.</Alert>
+            )}
+
             <Grid container spacing={3}>
                 {eventos.map((evt) => (
-                    <Grid item xs={12} md={6} lg={4} key={evt.IdEvento}>
-                        <Card sx={{ 
-                            height: '100%', 
-                            display: 'flex', 
-                            flexDirection: 'column',
-                            borderTop: '5px solid #43a047', // Borde verde
-                            boxShadow: 3,
-                            transition: '0.3s',
-                            '&:hover': { transform: 'scale(1.02)' }
-                        }}>
+                    // OJO: Aquí asumo que tu campo ID es 'id_evento'
+                    <Grid item xs={12} md={6} lg={4} key={evt.id_evento}>
+                        <Card sx={{ height: '100%', display: 'flex', flexDirection: 'column', borderTop: '5px solid #43a047', boxShadow: 3, transition: '0.3s', '&:hover': { transform: 'scale(1.02)' } }}>
                             <CardContent sx={{ flexGrow: 1 }}>
-                                {/* Título */}
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                                     <EventIcon sx={{ color: '#2e7d32', mr: 1 }} />
-                                    <Typography variant="h6" component="div" sx={{ lineHeight: 1.2 }}>
-                                        {evt.NomCurse}
+                                    <Typography variant="h6" sx={{ lineHeight: 1.2, fontWeight: 'bold' }}>
+                                        {evt.nombre_evento}
                                     </Typography>
                                 </Box>
-
                                 <Divider sx={{ my: 1.5 }} />
-
-                                {/* Chips de Fecha y Costo */}
+                                
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
-                                    <Chip 
-                                        icon={<EventIcon />} 
-                                        label={evt.DateEvento} 
-                                        size="small" 
-                                        color="primary"
-                                        variant="outlined" 
-                                    />
-                                    <Chip 
-                                        icon={<AttachMoneyIcon />} 
-                                        label={`$${evt.CostEvento}`} 
-                                        size="small" 
-                                        color="success" 
-                                    />
+                                    <Chip label={formatearFecha(evt.fecha_evento || evt.date_evento)} size="small" color="primary" variant="outlined" />
+                                    <Chip icon={<AttachMoneyIcon />} label={`$${evt.costo_evento || evt.cost_evento}`} size="small" color="success" variant="outlined" />
                                 </Box>
                                 
-                                {/* Descripción */}
-                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2, minHeight: 40 }}>
-                                    {evt.DesEvento}
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                    {evt.des_evento}
                                 </Typography>
 
-                                {/* Información Extra (Cupo y Cliente Organizador) */}
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                     <GroupIcon fontSize="small" color="action" />
                                     <Typography variant="caption">
-                                        Cupo Máximo: <strong>{evt.MaxPersonas} personas</strong>
+                                        Cupo: <strong>{evt.cupo_maximo} personas</strong>
                                     </Typography>
                                 </Box>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <PersonIcon fontSize="small" color="action" />
-                                    <Typography variant="caption">
-                                        Organizador: <strong>{evt.NombreCliente || "Sin asignar"}</strong>
-                                    </Typography>
-                                </Box>
-
                             </CardContent>
 
-                            {/* --- BOTONES DE ACCIÓN --- */}
                             <CardActions sx={{ justifyContent: 'space-between', bgcolor: '#f1f8e9', padding: 2 }}>
-                                
-                                {/* Botón NUEVO: Ir a Gestionar Inscripciones */}
                                 <Button 
                                     size="small" 
-                                    startIcon={<GroupIcon />} 
-                                    onClick={() => navigate(`/eventos/inscripciones/${evt.IdEvento}`)}
+                                    startIcon={<PersonAddIcon />}
                                     sx={{ color: '#2e7d32', fontWeight: 'bold' }}
+                                    onClick={() => navigate(`/eventos/inscripciones/${evt.id_evento}`)}
                                 >
-                                    Inscribir Alumnos
+                                    Alumnos
                                 </Button>
 
-                                {/* Botones de Editar y Borrar */}
                                 <Box>
-                                    <Tooltip title="Editar Evento">
-                                        <IconButton color="primary" onClick={() => navigate(`/eventos/edit/${evt.IdEvento}`)}>
+                                    <Tooltip title="Editar">
+                                        <IconButton color="primary" onClick={() => navigate(`/eventos/edit/${evt.id_evento}`)}>
                                             <EditIcon />
                                         </IconButton>
                                     </Tooltip>
-                                    <Tooltip title="Eliminar Evento">
-                                        <IconButton color="error" onClick={() => handleDelete(evt.IdEvento)}>
+                                    <Tooltip title="Eliminar">
+                                        <IconButton color="error" onClick={() => handleDelete(evt.id_evento)}>
                                             <DeleteIcon />
                                         </IconButton>
                                     </Tooltip>

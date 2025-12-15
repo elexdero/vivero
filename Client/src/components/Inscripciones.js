@@ -1,186 +1,269 @@
-import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { 
-    Box, 
-    Button, 
-    Card, 
-    CardContent, 
-    Typography, 
-    Container, 
-    TextField, 
-    MenuItem, 
-    List, 
-    ListItem, 
-    ListItemText, 
-    ListItemAvatar, 
-    Avatar, 
-    IconButton, 
-    Divider,
-    Alert
+    Container, Typography, Box, Paper, Table, TableBody, TableCell, 
+    TableContainer, TableHead, TableRow, Button, IconButton, 
+    MenuItem, Select, FormControl, InputLabel, Alert, Snackbar,
+    Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid
 } from '@mui/material';
-import PersonAddIcon from '@mui/icons-material/PersonAdd';
 import DeleteIcon from '@mui/icons-material/Delete';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import SchoolIcon from '@mui/icons-material/School';
-import PersonIcon from '@mui/icons-material/Person';
+import PersonAddIcon from '@mui/icons-material/PersonAdd';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
 export default function Inscripciones() {
+    const { id_evento } = useParams();
     const navigate = useNavigate();
-    const { id } = useParams(); // Recibimos el ID del Evento desde la URL
 
-    // 1. Simulación: Datos del Evento Actual (En realidad harías un fetch con el ID)
-    const eventoActual = {
-        id: id,
-        nombre: "Taller de Terrarios Eternos",
-        cupoMaximo: 12,
-        costo: 650
+    // --- ESTADOS ---
+    const [inscritos, setInscritos] = useState([]);
+    const [clientesDisponibles, setClientesDisponibles] = useState([]);
+    const [seleccionado, setSeleccionado] = useState('');
+    const [mensaje, setMensaje] = useState({ open: false, text: '', type: 'success' });
+    
+    // Estados para el MODAL de Nuevo Cliente
+    const [openModal, setOpenModal] = useState(false);
+    const [nuevoCliente, setNuevoCliente] = useState({
+        name_cliente: '', ap_pat_cliente: '', ap_mat_cliente: '',
+        dir_cliente: '', tel_cliente: '', mail_cliente: ''
+    });
+
+    // Ajusta la URL si tu puerto es diferente
+    const API_URL = 'http://localhost:4000/api';
+
+    // --- CARGAR DATOS INICIALES ---
+    useEffect(() => {
+        cargarInscritos();
+        cargarClientes();
+    }, [id_evento]);
+
+    const cargarInscritos = async () => {
+        try {
+            const res = await fetch(`${API_URL}/inscripciones/${id_evento}`);
+            if (res.ok) setInscritos(await res.json());
+        } catch (error) { console.error(error); }
     };
 
-    // 2. Simulación: Todos tus clientes disponibles (para el menú desplegable)
-    const todosLosClientes = [
-        { id: 101, nombre: "Ana García", email: "ana@mail.com" },
-        { id: 102, nombre: "Carlos López", email: "carlos@mail.com" },
-        { id: 103, nombre: "María Rodríguez", email: "maria@mail.com" },
-        { id: 104, nombre: "Pedro Martínez", email: "pedro@mail.com" },
-        { id: 105, nombre: "Lucía Fernández", email: "lucia@mail.com" }
-    ];
-
-    // 3. ESTADO: Lista de alumnos YA inscritos en este evento
-    const [inscritos, setInscritos] = useState([
-        { id: 101, nombre: "Ana García", email: "ana@mail.com", fechaInscripcion: "2024-02-28" }
-    ]);
-
-    // Estado para el selector del alumno nuevo
-    const [alumnoSeleccionado, setAlumnoSeleccionado] = useState('');
-
-    // --- FUNCIONES ---
-
-    const handleInscribir = () => {
-        // Validaciones básicas
-        if (!alumnoSeleccionado) return;
-        
-        // Verificar si ya está inscrito
-        const yaExiste = inscritos.find(alum => alum.id === alumnoSeleccionado);
-        if (yaExiste) {
-            alert("Este alumno ya está inscrito en el curso.");
-            return;
-        }
-
-        // Verificar cupo (Opcional)
-        if (inscritos.length >= eventoActual.cupoMaximo) {
-            alert("¡Cupo lleno! No se pueden inscribir más alumnos.");
-            return;
-        }
-
-        // Buscar los datos completos del cliente seleccionado
-        const datosCliente = todosLosClientes.find(c => c.id === alumnoSeleccionado);
-
-        // Agregarlo a la lista de inscritos
-        const nuevaInscripcion = {
-            ...datosCliente,
-            fechaInscripcion: new Date().toISOString().split('T')[0] // Fecha de hoy
-        };
-
-        setInscritos([...inscritos, nuevaInscripcion]);
-        setAlumnoSeleccionado(''); // Limpiar el selector
+    const cargarClientes = async () => {
+        try {
+            // Nota: Asegúrate de que tu ruta en el backend sea /clientes
+            const res = await fetch(`${API_URL}/clientes`);
+            if (res.ok) setClientesDisponibles(await res.json());
+        } catch (error) { console.error(error); }
     };
 
-    const handleEliminar = (idAlumno) => {
-        if (window.confirm("¿Deseas dar de baja a este alumno del curso?")) {
-            setInscritos(inscritos.filter(alum => alum.id !== idAlumno));
+    // --- FUNCIÓN 1: INSCRIBIR CLIENTE EXISTENTE (Botón Inscribir) ---
+    const handleInscribir = async () => {
+        if (!seleccionado) return;
+        try {
+            const res = await fetch(`${API_URL}/inscripciones/new`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ id_evento: id_evento, id_cliente: seleccionado })
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || "Error al inscribir (¿Ya está inscrito?)");
+            }
+
+            setMensaje({ open: true, text: 'Alumno inscrito correctamente', type: 'success' });
+            setSeleccionado('');
+            cargarInscritos(); // Actualiza la tabla
+        } catch (error) {
+            setMensaje({ open: true, text: error.message, type: 'error' });
         }
+    };
+
+    // --- FUNCIÓN 2 MEJORADA: CREAR CLIENTE + AUTO-INSCRIBIR ---
+    const handleGuardarCliente = async () => {
+        try {
+            // PASO 1: Crear el cliente en la Base de Datos
+            // Verifica que tu ruta en backend sea '/clientes' o '/clientes/new'
+            const resCliente = await fetch(`${API_URL}/clientes`, { 
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(nuevoCliente)
+            });
+
+            if (!resCliente.ok) throw new Error("Error al registrar cliente");
+
+            const clienteCreado = await resCliente.json();
+
+            // PASO 2: Inscribirlo automáticamente al evento actual
+            // Usamos el ID del cliente recién creado
+            const resInscripcion = await fetch(`${API_URL}/inscripciones/new`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    id_evento: id_evento, 
+                    id_cliente: clienteCreado.id_cliente 
+                })
+            });
+
+            if (!resInscripcion.ok) throw new Error("Cliente creado, pero hubo error al inscribirlo.");
+
+            // PASO 3: Limpieza y Actualización
+            setOpenModal(false);
+            setNuevoCliente({ name_cliente: '', ap_pat_cliente: '', ap_mat_cliente: '', dir_cliente: '', tel_cliente: '', mail_cliente: '' });
+
+            // Recargamos todo para que se vea reflejado
+            await cargarClientes();   // Actualiza el dropdown
+            await cargarInscritos();  // Actualiza la tabla de inscritos
+
+            setMensaje({ open: true, text: 'Cliente registrado e inscrito exitosamente', type: 'success' });
+
+        } catch (error) {
+            setMensaje({ open: true, text: error.message, type: 'error' });
+        }
+    };
+
+    const handleDelete = async (id) => {
+        if(!window.confirm("¿Eliminar inscripción?")) return;
+        try {
+            await fetch(`${API_URL}/inscripciones/delete/${id}`, { method: 'DELETE' });
+            setInscritos(prev => prev.filter(i => i.id_inscripcion !== id));
+        } catch (error) { console.error(error); }
     };
 
     return (
-        <Container maxWidth="md" sx={{ mt: 5, mb: 5 }}>
-            <Button startIcon={<ArrowBackIcon />} onClick={() => navigate('/eventos')} sx={{ mb: 2 }}>
-                Volver a Eventos
-            </Button>
+        <Container maxWidth="md" sx={{ mt: 4 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+                <IconButton onClick={() => navigate('/eventos')} sx={{ mr: 2 }}>
+                    <ArrowBackIcon />
+                </IconButton>
+                <Typography variant="h4">Inscripciones del Evento</Typography>
+            </Box>
 
-            <Card sx={{ borderTop: '6px solid #1976d2' }}>
-                <CardContent>
-                    
-                    {/* ENCABEZADO DEL EVENTO */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <SchoolIcon sx={{ color: '#1976d2', fontSize: 40, mr: 2 }} />
-                        <Box>
-                            <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
-                                Inscripciones: {eventoActual.nombre}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                                Cupo: {inscritos.length} / {eventoActual.cupoMaximo} alumnos
-                            </Typography>
-                        </Box>
-                    </Box>
-                    
-                    <Divider sx={{ mb: 3 }} />
-
-                    {/* SECCIÓN 1: AGREGAR ALUMNO */}
-                    <Typography variant="h6" gutterBottom sx={{ color: '#1565c0' }}>
-                        Inscribir Nuevo Alumno
-                    </Typography>
-                    
-                    <Box sx={{ display: 'flex', gap: 2, mb: 4, alignItems: 'flex-start' }}>
-                        <TextField
-                            select
-                            label="Seleccionar Cliente"
-                            fullWidth
-                            value={alumnoSeleccionado}
-                            onChange={(e) => setAlumnoSeleccionado(e.target.value)}
-                            size="small"
+            {/* CAJA DE INSCRIPCIÓN */}
+            <Paper sx={{ p: 3, mb: 4, bgcolor: '#f5f5f5', borderLeft: '6px solid #2e7d32' }}>
+                <Typography variant="h6" gutterBottom sx={{color: '#2e7d32', fontWeight:'bold'}}>
+                    Inscribir Alumno
+                </Typography>
+                
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+                    <FormControl fullWidth size="small" sx={{bgcolor:'white'}}>
+                        <InputLabel>Buscar alumno por nombre...</InputLabel>
+                        <Select
+                            value={seleccionado}
+                            label="Buscar alumno por nombre..."
+                            onChange={(e) => setSeleccionado(e.target.value)}
                         >
-                            {todosLosClientes.map((cliente) => (
-                                <MenuItem key={cliente.id} value={cliente.id}>
-                                    {cliente.nombre}
+                            {clientesDisponibles.map((c) => (
+                                <MenuItem key={c.id_cliente} value={c.id_cliente}>
+                                    {c.name_cliente} {c.ap_pat_cliente} {c.ap_mat_cliente}
                                 </MenuItem>
                             ))}
-                        </TextField>
-                        <Button 
-                            variant="contained" 
-                            startIcon={<PersonAddIcon />} 
-                            onClick={handleInscribir}
-                            disabled={!alumnoSeleccionado}
-                        >
-                            Inscribir
-                        </Button>
-                    </Box>
+                        </Select>
+                    </FormControl>
 
-                    {/* SECCIÓN 2: LISTA DE ASISTENCIA */}
-                    <Typography variant="h6" gutterBottom>
-                        Lista de Asistencia ({inscritos.length})
-                    </Typography>
+                    <Button 
+                        variant="contained" 
+                        color="success"
+                        startIcon={<PersonAddIcon />}
+                        onClick={handleInscribir} 
+                        disabled={!seleccionado}
+                        sx={{height: 40}}
+                    >
+                        Inscribir
+                    </Button>
+                    
+                    {/* BOTÓN PARA ABRIR EL MODAL */}
+                    <Button 
+                        variant="outlined" 
+                        startIcon={<AddCircleOutlineIcon />} 
+                        onClick={() => setOpenModal(true)}
+                        sx={{ whiteSpace: 'nowrap', height: 40 }}
+                    >
+                        Nuevo Cliente
+                    </Button>
+                </Box>
+            </Paper>
 
-                    {inscritos.length === 0 ? (
-                        <Alert severity="info">Aún no hay alumnos inscritos en este curso.</Alert>
-                    ) : (
-                        <List sx={{ bgcolor: '#f5f5f5', borderRadius: 2 }}>
-                            {inscritos.map((alumno) => (
-                                <div key={alumno.id}>
-                                    <ListItem
-                                        secondaryAction={
-                                            <IconButton edge="end" color="error" onClick={() => handleEliminar(alumno.id)}>
-                                                <DeleteIcon />
-                                            </IconButton>
-                                        }
-                                    >
-                                        <ListItemAvatar>
-                                            <Avatar sx={{ bgcolor: '#1976d2' }}>
-                                                <PersonIcon />
-                                            </Avatar>
-                                        </ListItemAvatar>
-                                        <ListItemText
-                                            primary={alumno.nombre}
-                                            secondary={`Inscrito el: ${alumno.fechaInscripcion} | Email: ${alumno.email}`}
-                                        />
-                                    </ListItem>
-                                    <Divider component="li" />
-                                </div>
-                            ))}
-                        </List>
-                    )}
+            {/* TABLA DE INSCRITOS */}
+            <TableContainer component={Paper}>
+                <Table>
+                    <TableHead sx={{ bgcolor: '#eeeeee' }}>
+                        <TableRow>
+                            <TableCell>ID</TableCell>
+                            <TableCell>Nombre Completo</TableCell>
+                            <TableCell>Fecha Inscripción</TableCell>
+                            <TableCell align="right">Acciones</TableCell>
+                        </TableRow>
+                    </TableHead>
+                    <TableBody>
+                        {inscritos.length === 0 ? (
+                            <TableRow><TableCell colSpan={4} align="center">No hay inscritos aún</TableCell></TableRow>
+                        ) : (
+                            inscritos.map((row) => (
+                                <TableRow key={row.id_inscripcion}>
+                                    <TableCell>{row.id_inscripcion}</TableCell>
+                                    <TableCell>{row.name_cliente} {row.ap_pat_cliente} {row.ap_mat_cliente}</TableCell>
+                                    <TableCell>{row.fecha_registro ? new Date(row.fecha_registro).toLocaleDateString() : 'Hoy'}</TableCell>
+                                    <TableCell align="right">
+                                        <IconButton color="error" onClick={() => handleDelete(row.id_inscripcion)}>
+                                            <DeleteIcon />
+                                        </IconButton>
+                                    </TableCell>
+                                </TableRow>
+                            ))
+                        )}
+                    </TableBody>
+                </Table>
+            </TableContainer>
 
-                </CardContent>
-            </Card>
+            {/* --- MODAL (POPUP) PARA REGISTRAR NUEVO CLIENTE --- */}
+            <Dialog open={openModal} onClose={() => setOpenModal(false)} maxWidth="sm" fullWidth>
+                <DialogTitle sx={{bgcolor: '#2e7d32', color: 'white'}}>Registrar Nuevo Cliente</DialogTitle>
+                <DialogContent sx={{mt: 2}}>
+                    <Grid container spacing={2} sx={{ mt: 1 }}>
+                        <Grid item xs={12}>
+                            <TextField label="Nombre(s)" fullWidth size="small" required
+                                value={nuevoCliente.name_cliente}
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, name_cliente: e.target.value})}
+                            />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField label="Apellido Paterno" fullWidth size="small" required
+                                value={nuevoCliente.ap_pat_cliente}
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, ap_pat_cliente: e.target.value})}
+                            />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField label="Apellido Materno" fullWidth size="small"
+                                value={nuevoCliente.ap_mat_cliente}
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, ap_mat_cliente: e.target.value})}
+                            />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <TextField label="Dirección" fullWidth size="small"
+                                value={nuevoCliente.dir_cliente}
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, dir_cliente: e.target.value})}
+                            />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField label="Teléfono" fullWidth size="small"
+                                value={nuevoCliente.tel_cliente}
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, tel_cliente: e.target.value})}
+                            />
+                        </Grid>
+                        <Grid item xs={6}>
+                            <TextField label="Email" fullWidth size="small"
+                                value={nuevoCliente.mail_cliente}
+                                onChange={(e) => setNuevoCliente({...nuevoCliente, mail_cliente: e.target.value})}
+                            />
+                        </Grid>
+                    </Grid>
+                </DialogContent>
+                <DialogActions sx={{p: 3}}>
+                    <Button onClick={() => setOpenModal(false)} color="error" variant="outlined">Cancelar</Button>
+                    <Button onClick={handleGuardarCliente} variant="contained" color="success">Guardar e Inscribir</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Snackbar open={mensaje.open} autoHideDuration={4000} onClose={() => setMensaje({...mensaje, open: false})}>
+                <Alert severity={mensaje.type} variant="filled">{mensaje.text}</Alert>
+            </Snackbar>
         </Container>
     );
 }
