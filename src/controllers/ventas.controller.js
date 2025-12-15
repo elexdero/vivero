@@ -76,16 +76,30 @@ export const generarVenta = async (req, res, next) => {
 export const obtenerDetalleVenta = async (req, res, next) => {
     try {
         const { id } = req.params;
+        // Hacemos JOIN con todas las tablas posibles para obtener nombres y precios
         const result = await pool.query(`
-            SELECT d.*, p.name_planta, prod.name_producto, serv.name_servicio
+            SELECT 
+                d.*,
+                v.fecha_venta,
+                v.forma_pago,
+                v.total_venta,
+                p.name_planta,
+                prod.name_producto,
+                serv.name_servicio
             FROM detalle_ventas d
+            INNER JOIN ventas v ON d.id_venta = v.id_venta
             LEFT JOIN plantas p ON d.id_planta = p.id_planta
             LEFT JOIN productos prod ON d.id_producto = prod.id_producto
             LEFT JOIN otros_servicios serv ON d.id_servicio = serv.id_servicio
             WHERE d.id_venta = $1
         `, [id]);
+
+        if (result.rows.length === 0) {
+            return res.status(404).json({ message: "Venta no encontrada" });
+        }
+
         res.json(result.rows);
     } catch (error) {
         next(error);
     }
-};
+}

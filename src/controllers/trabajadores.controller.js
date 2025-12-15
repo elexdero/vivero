@@ -29,13 +29,50 @@ export const mostrarTrabajadoresById = async(req, res, next) =>{
 
 export const registrarTrabajador = async (req, res, next) => {
     try {
-        const { nameTrabajador, apPatTrabajador, apMatTrabajador, direccionTrabajador, telTrabajador, emailTrabajador } = req.body;
+        // Recibimos TODOS los datos del frontend
+        const { 
+            nameTrabajador, 
+            apPatTrabajador, 
+            apMatTrabajador, 
+            fechaNacimiento,
+            direccionTrabajador, 
+            telTrabajador, 
+            emailTrabajador,
+            puestoTrabajador,
+            turnoTrabajador,
+            sueldoTrabajador,
+            fechaAlta
+        } = req.body;
 
         const { rows } = await pool.query(
             `INSERT INTO trabajadores 
-            (name_trabajador, ap_pat_trabajador, ap_mat_trabajador, dir_trabajador, tel_trabajador, email_trabajador) 
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
-            [nameTrabajador, apPatTrabajador, apMatTrabajador, direccionTrabajador, telTrabajador, emailTrabajador]
+            (
+                name_trabajador, 
+                ap_pat_trabajador, 
+                ap_mat_trabajador, 
+                fecha_nacimiento,
+                direccion_trabajador, 
+                tel_trabajador, 
+                email_trabajador,
+                puesto_trabajador,
+                turno_trabajador,
+                sueldo_trabajador,
+                fecha_alta
+            ) 
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+            [
+                nameTrabajador, 
+                apPatTrabajador, 
+                apMatTrabajador, 
+                fechaNacimiento,
+                direccionTrabajador, 
+                telTrabajador, 
+                emailTrabajador,
+                puestoTrabajador,
+                turnoTrabajador,
+                sueldoTrabajador,
+                fechaAlta
+            ]
         );
 
         res.json(rows[0]);

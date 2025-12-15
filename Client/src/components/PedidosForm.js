@@ -13,8 +13,11 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 export default function PedidosForm() {
     const navigate = useNavigate();
 
+    // --- NUEVO: Obtenemos fecha de hoy para bloquear días pasados ---
+    const today = new Date().toISOString().split('T')[0];
+
     // 1. ESTADOS DE CATÁLOGOS
-    const [clientes, setClientes] = useState([]); // <--- NECESITAMOS CLIENTES
+    const [clientes, setClientes] = useState([]); 
     const [proveedores, setProveedores] = useState([]);
     const [plantas, setPlantas] = useState([]);
     const [productos, setProductos] = useState([]);
@@ -22,13 +25,13 @@ export default function PedidosForm() {
     const [error, setError] = useState(null);
 
     // 2. ESTADOS DEL FORMULARIO
-    const [idCliente, setIdCliente] = useState(''); // <--- EL CLIENTE PIDE
+    const [idCliente, setIdCliente] = useState(''); 
     const [fechaEntrega, setFechaEntrega] = useState('');
     
     // 3. ESTADOS PARA ITEM
     const [tipoItem, setTipoItem] = useState('planta');
     const [idItemSel, setIdItemSel] = useState('');
-    const [idProvSel, setIdProvSel] = useState(''); // Proveedor sugerido para este item
+    const [idProvSel, setIdProvSel] = useState(''); 
     const [cantidad, setCantidad] = useState(1);
     const [precio, setPrecio] = useState(0); 
 
@@ -38,7 +41,7 @@ export default function PedidosForm() {
         const cargarDatos = async () => {
             try {
                 const [resCli, resProv, resPlantas, resProd] = await Promise.all([
-                    fetch('http://localhost:4000/api/clientes'), // Traemos clientes
+                    fetch('http://localhost:4000/api/clientes'), 
                     fetch('http://localhost:4000/api/proveedores'),
                     fetch('http://localhost:4000/api/plantas'),
                     fetch('http://localhost:4000/api/productos')
@@ -108,7 +111,7 @@ export default function PedidosForm() {
         }
 
         const payload = {
-            id_cliente: idCliente, // Enviamos el cliente
+            id_cliente: idCliente, 
             fecha_entrega: fechaEntrega,
             items: carrito
         };
@@ -167,6 +170,8 @@ export default function PedidosForm() {
                                     <TextField
                                         type="date" label="Fecha Límite / Entrega" fullWidth
                                         InputLabelProps={{ shrink: true }}
+                                        // --- NUEVO: Restricción de fecha mínima ---
+                                        inputProps={{ min: today }}
                                         value={fechaEntrega}
                                         onChange={(e) => setFechaEntrega(e.target.value)}
                                     />

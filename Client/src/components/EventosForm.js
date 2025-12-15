@@ -10,6 +10,9 @@ export default function EventosForm() {
     const { id } = useParams(); 
     const [loading, setLoading] = useState(false);
 
+    // --- NUEVO: Obtenemos la fecha de hoy en formato YYYY-MM-DD ---
+    const today = new Date().toISOString().split('T')[0];
+
     // Estado inicial con TUS nombres de columna
     const [evento, setEvento] = useState({
         nombre_evento: '',
@@ -55,7 +58,7 @@ export default function EventosForm() {
         e.preventDefault();
         setLoading(true);
         try {
-            const url = id ? `http://localhost:4000/api/eventos/${id}` : 'http://localhost:4000/api/eventos/new';
+            const url = id ? `http://localhost:4000/api/eventos/edit/${id}` : 'http://localhost:4000/api/eventos/new';
             const method = id ? 'PUT' : 'POST';
 
             const res = await fetch(url, {
@@ -113,6 +116,8 @@ export default function EventosForm() {
                                         name="date_evento" 
                                         type="date" fullWidth required 
                                         InputLabelProps={{ shrink: true }}
+                                        // --- NUEVO: Aquí aplicamos el mínimo ---
+                                        inputProps={{ min: today }} 
                                         value={evento.date_evento} 
                                         onChange={handleChange} 
                                     />

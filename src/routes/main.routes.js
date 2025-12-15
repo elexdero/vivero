@@ -3,7 +3,7 @@ import { mostrarPlantas, mostrarPlantasById, añadirPlanta, eliminarPlanta, modi
 // Asegúrate de que estos archivos existan y exporten las funciones:
 import { obtenerServicios, obtenerServicioById, crearServicio, actualizarServicio, eliminarServicio } from '../controllers/servicios.controller.js';
 import { obtenerProductos, obtenerProducto, crearProducto, actualizarProducto, eliminarProducto } from '../controllers/productos.controller.js';
-import { mostrarVentas, generarVenta } from "../controllers/ventas.controller.js"; 
+import { mostrarVentas, generarVenta,obtenerDetalleVenta } from "../controllers/ventas.controller.js"; 
 import {mostrarTrabajadores, mostrarTrabajadoresById, registrarTrabajador, borrarTrabajador, modificarTrabajador} from '../controllers/trabajadores.controller.js'
 import {mostrarProveedores, mostrarProveedorById, modificarProveedor, eliminarProveedor, añadirProveedor} from '../controllers/proveedores.controller.js'
 import  {mostrarInscritosById, mostrarinscritosCurso, inscribirClientes, eliminarInscripcion} from '../controllers/inscripciones.controller.js'
@@ -38,7 +38,7 @@ router.delete('/productos/:id', eliminarProducto);
 // --- VENTAS ---
 router.get('/ventas', mostrarVentas);
 router.post('/ventas', generarVenta); 
-
+router.get('/ventas/:id', obtenerDetalleVenta);
 //--- PROVEEDORES ---
 router.get('/proveedores', mostrarProveedores);
 router.post('/proveedores/new', añadirProveedor);

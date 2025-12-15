@@ -27,6 +27,7 @@ import PedidosList from './components/PedidosList';
 import PedidosForm from './components/PedidosForm';
 import VentasList from './components/VentasList';
 import VentasForm from './components/VentasForm';
+import VentasById from './components/VentasById';
 
 function App() {
   return (
@@ -52,6 +53,7 @@ function App() {
           {/* --- Ventas --- */}
           <Route path='/ventas' element={<VentasList />} />
           <Route path='/ventas/new' element={<VentasForm />} />
+          <Route path='/ventas/:id' element={<VentasById />}/>
 
           {/* --- Inscripciones --- */}
           <Route path="/eventos/inscripciones/:id_evento" element={<Inscripciones />} />
